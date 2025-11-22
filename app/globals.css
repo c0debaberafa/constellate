@@ -117,6 +117,22 @@
   .caret-transparent {
     caret-color: transparent;
   }
+
+  /* Cursor blinking animation */
+  @keyframes cursor-blink {
+    0%,
+    50% {
+      opacity: 1;
+    }
+    51%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .cursor-blink {
+    animation: cursor-blink 1s step-end infinite;
+  }
 }
 
 .char {

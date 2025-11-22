@@ -22,7 +22,9 @@ const AnimatedTextarea = React.forwardRef<
   const isUpdatingRef = React.useRef(false);
   const animationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const cursorUpdateTimeoutRef = React.useRef<number | null>(null);
+  const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [isFocused, setIsFocused] = React.useState(false);
+  const [isTyping, setIsTyping] = React.useState(false);
 
   // Combine refs
   React.useImperativeHandle(ref, () => editorRef.current as HTMLDivElement);
@@ -45,6 +47,21 @@ const AnimatedTextarea = React.forwardRef<
       try {
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) {
+          // If no selection but focused, show cursor at start
+          if (isFocused && value === "") {
+            const paddingLeft =
+              parseFloat(window.getComputedStyle(editor).paddingLeft) || 0;
+            const paddingTop =
+              parseFloat(window.getComputedStyle(editor).paddingTop) || 0;
+            const lineHeight =
+              parseFloat(window.getComputedStyle(editor).lineHeight) || 24;
+
+            cursor.style.left = `${paddingLeft}px`;
+            cursor.style.top = `${paddingTop}px`;
+            cursor.style.height = `${lineHeight}px`;
+            cursor.style.opacity = "1";
+            return;
+          }
           cursor.style.opacity = "0";
           return;
         }
@@ -76,7 +93,7 @@ const AnimatedTextarea = React.forwardRef<
         // Ignore errors
       }
     });
-  }, [isFocused]);
+  }, [isFocused, value]);
 
   // Update content and apply animations
   React.useEffect(() => {
@@ -190,6 +207,16 @@ const AnimatedTextarea = React.forwardRef<
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     if (isUpdatingRef.current) return;
     const newContent = e.currentTarget.textContent || "";
+
+    // Mark as typing and reset timeout
+    setIsTyping(true);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 1000); // Stop blinking after 1 second of no typing
+
     onChange(newContent);
     // Cursor will update via the value change effect
   };
@@ -204,9 +231,30 @@ const AnimatedTextarea = React.forwardRef<
 
   const handleFocus = () => {
     setIsFocused(true);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(updateCursorPosition);
-    });
+    // If empty, show cursor at start immediately
+    if (value === "") {
+      requestAnimationFrame(() => {
+        const editor = editorRef.current;
+        const cursor = cursorRef.current;
+        if (editor && cursor) {
+          const paddingLeft =
+            parseFloat(window.getComputedStyle(editor).paddingLeft) || 0;
+          const paddingTop =
+            parseFloat(window.getComputedStyle(editor).paddingTop) || 0;
+          const lineHeight =
+            parseFloat(window.getComputedStyle(editor).lineHeight) || 24;
+
+          cursor.style.left = `${paddingLeft}px`;
+          cursor.style.top = `${paddingTop}px`;
+          cursor.style.height = `${lineHeight}px`;
+          cursor.style.opacity = "1";
+        }
+      });
+    } else {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(updateCursorPosition);
+      });
+    }
   };
 
   const handleBlur = () => {
@@ -239,6 +287,9 @@ const AnimatedTextarea = React.forwardRef<
       if (cursorUpdateTimeoutRef.current) {
         cancelAnimationFrame(cursorUpdateTimeoutRef.current);
       }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -268,12 +319,14 @@ const AnimatedTextarea = React.forwardRef<
       {isFocused && (
         <div
           ref={cursorRef}
-          className="absolute pointer-events-none z-10 transition-all duration-75 ease-linear"
+          className={`absolute pointer-events-none z-10 transition-all duration-75 ease-linear ${
+            !isTyping ? "cursor-blink" : ""
+          }`}
           style={{
             left: "0px",
             top: "0px",
-            width: "4px",
-            height: "1.5em",
+            width: "8px",
+            height: "12px",
             backgroundColor: "hsl(160 65% 45%)",
             opacity: 0,
           }}
