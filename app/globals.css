@@ -1,26 +1,100 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* FRED Design System - All colors in HSL */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+    /* Core colors */
+    --background: 150 25% 97%;
+    --foreground: 150 15% 15%;
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    --card: 0 0% 100%;
+    --card-foreground: 150 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 15% 15%;
+
+    --primary: 160 65% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 20% 92%;
+    --secondary-foreground: 150 15% 15%;
+
+    --muted: 150 15% 94%;
+    --muted-foreground: 150 10% 45%;
+
+    --accent: 160 50% 92%;
+    --accent-foreground: 160 65% 35%;
+
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 15% 88%;
+    --input: 150 10% 90%;
+    --ring: 160 65% 45%;
+
+    /* Sidebar colors */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 150 15% 15%;
+    --sidebar-primary: 160 65% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 20% 92%;
+    --sidebar-accent-foreground: 150 15% 15%;
+    --sidebar-border: 150 15% 88%;
+    --sidebar-ring: 160 65% 45%;
+    --sidebar-hover: 150 20% 92%;
+
+    --radius: 0.75rem;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 150 15% 8%;
+    --foreground: 150 10% 95%;
+
+    --card: 150 15% 10%;
+    --card-foreground: 150 10% 95%;
+
+    --popover: 150 15% 10%;
+    --popover-foreground: 150 10% 95%;
+
+    --primary: 160 55% 50%;
+    --primary-foreground: 150 15% 8%;
+
+    --secondary: 150 10% 15%;
+    --secondary-foreground: 150 10% 95%;
+
+    --muted: 150 10% 15%;
+    --muted-foreground: 150 8% 60%;
+
+    --accent: 150 10% 15%;
+    --accent-foreground: 150 10% 95%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 150 10% 95%;
+
+    --border: 150 10% 20%;
+    --input: 150 10% 20%;
+    --ring: 160 55% 50%;
+
+    --sidebar-background: 150 15% 10%;
+    --sidebar-foreground: 150 10% 95%;
+    --sidebar-primary: 160 55% 50%;
+    --sidebar-primary-foreground: 150 15% 8%;
+    --sidebar-accent: 150 10% 15%;
+    --sidebar-accent-foreground: 150 10% 95%;
+    --sidebar-border: 150 10% 20%;
+    --sidebar-ring: 160 55% 50%;
+    --sidebar-hover: 150 10% 15%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+  }
 }
