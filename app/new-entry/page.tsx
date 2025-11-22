@@ -2,27 +2,27 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { AnimatedTextarea } from "@/components/ui/animated-textarea";
 import { toast } from "sonner";
 import { Save, PenSquare } from "lucide-react";
 import { format } from "date-fns";
+import MonkeyEditor from "@/components/MonkeyEditor";
 
 const NewEntry = () => {
   const [content, setContent] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  // Auto-resize textarea
+  // Auto-resize editor
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = `${textarea.scrollHeight}px`;
+    const editor = editorRef.current;
+    if (editor) {
+      editor.style.height = "auto";
+      editor.style.height = `${editor.scrollHeight}px`;
     }
   }, [content]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
+  const handleChange = (newContent: string) => {
     setContent(newContent);
 
     // Set start time when user first starts typing
@@ -41,8 +41,9 @@ const NewEntry = () => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
       handleSubmit();
     }
   };
@@ -90,15 +91,13 @@ const NewEntry = () => {
           </div>
         </header>
 
-        <Textarea
-          ref={textareaRef}
+        <AnimatedTextarea
+          ref={editorRef}
           value={content}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Start writing..."
-          spellCheck={false}
-          className="font-mono text-lg resize-none border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40 overflow-hidden"
-          style={{ minHeight: "auto", height: "auto" }}
+          className="font-mono text-lg resize-none border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 overflow-hidden"
         />
       </div>
     </div>
