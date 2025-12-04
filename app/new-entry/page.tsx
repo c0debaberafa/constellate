@@ -1,56 +1,35 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AnimatedTextarea } from "@/components/ui/animated-textarea";
+import AnimatedTextarea from "@/components/editor/AnimatedTextarea";
 import { toast } from "sonner";
 import { Save, PenSquare } from "lucide-react";
 import { format } from "date-fns";
-import MonkeyEditor from "@/components/MonkeyEditor";
 
 const NewEntry = () => {
   const [content, setContent] = useState("");
+  const [cursorPos, setCursorPos] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  // Auto-resize editor
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (editor) {
-      editor.style.height = "auto";
-      editor.style.height = `${editor.scrollHeight}px`;
-    }
-  }, [content]);
 
   const handleChange = (newContent: string) => {
     setContent(newContent);
 
-    // Set start time when user first starts typing
     if (newContent.trim() && !startTime) {
       setStartTime(new Date());
     }
   };
 
   const handleSubmit = () => {
-    if (content.trim()) {
-      // Placeholder: This will connect to backend later
-      // startTime can be passed as part of the journal entry data
-      toast.success("Entry saved successfully");
-      setContent("");
-      setStartTime(null);
-    }
+    if (!content.trim()) return;
+
+    toast.success("Entry saved successfully");
+    setContent("");
+    setStartTime(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
-  const getWordCount = (text: string): number => {
-    return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
-  };
+  const getWordCount = (text: string): number =>
+    text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
 
   const wordCount = getWordCount(content);
 
@@ -65,6 +44,7 @@ const NewEntry = () => {
                 New Entry
               </h1>
             </div>
+
             <Button
               onClick={handleSubmit}
               disabled={!content.trim()}
@@ -74,30 +54,27 @@ const NewEntry = () => {
               <Save />
             </Button>
           </div>
+
           <div className="space-y-1">
             <p className="text-muted-foreground font-mono">
-              <em>&ldquo;Just show up at the page.&rdquo;</em> - Julia Cameron,
-              The Artist&apos;s Way
+              <em>&ldquo;Just show up at the page.&rdquo;</em> — Julia Cameron
             </p>
+
             {startTime && (
-              <>
-                <p className="text-sm text-muted-foreground font-mono">
-                  Started on{" "}
-                  {format(startTime, "EEEE, MMMM d, yyyy 'at' h:mm a")} | Word
-                  count: {wordCount}
-                </p>
-              </>
+              <p className="text-sm text-muted-foreground font-mono">
+                Started on {format(startTime, "EEEE, MMMM d, yyyy 'at' h:mm a")}{" "}
+                | Word count: {wordCount}
+              </p>
             )}
           </div>
         </header>
 
         <AnimatedTextarea
-          ref={editorRef}
           value={content}
           onChange={handleChange}
-          onKeyDown={handleKeyDown}
+          cursorPos={cursorPos}
+          onCursorChange={setCursorPos}
           placeholder="Start writing..."
-          className="font-mono text-lg resize-none border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 overflow-hidden"
         />
       </div>
     </div>

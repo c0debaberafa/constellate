@@ -100,24 +100,6 @@
 }
 
 @layer utilities {
-  @keyframes char-fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  .char-fade-in {
-    animation: char-fade-in 0.3s ease-in;
-  }
-
-  /* Hide default text caret */
-  .caret-transparent {
-    caret-color: transparent;
-  }
-
   /* Cursor blinking animation */
   @keyframes cursor-blink {
     0%,
@@ -133,27 +115,34 @@
   .cursor-blink {
     animation: cursor-blink 1s step-end infinite;
   }
-}
 
-.char {
-  display: inline-block;
-  opacity: 0;
-  animation: fadeIn 0.05s ease-out forwards;
-}
-
-.fade-char {
-  display: inline-block;
-  opacity: 0;
-  animation: fadeIn 0.1s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
+  /* Character fade-in animation */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .char {
+    opacity: 0;
+    animation: fadeIn 0.8s forwards;
+    will-change: opacity;
+  }
+
+  .cursor {
+    animation: blink 1.2s infinite;
+  }
+
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
   }
 }
