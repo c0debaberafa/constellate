@@ -128,12 +128,12 @@
 
   .char {
     opacity: 0;
-    animation: fadeIn 0.8s forwards;
+    animation: fadeIn 0.25s forwards;
     will-change: opacity;
   }
 
   .cursor {
-    animation: blink 1.2s infinite;
+    height: 1rem;
   }
 
   @keyframes blink {

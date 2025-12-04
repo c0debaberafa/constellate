@@ -23,12 +23,11 @@ export default function AnimatedTextarea({
   onCursorChange,
   placeholder,
 }: AnimatedTextareaProps) {
-  const [newIndices, setNewIndices] = useState<number[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevValue = useRef("");
-  const [charObjects, setCharObjects] = useState<{ id: string; ch: string }[]>(
-    []
-  );
+  const [charObjects, setCharObjects] = useState<
+    { id: string; ch: string; animating: boolean }[]
+  >([]);
 
   const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -36,7 +35,9 @@ export default function AnimatedTextarea({
 
   // Initialize charObjects on first render or if value changes programmatically
   useEffect(() => {
-    setCharObjects(value.split("").map((ch) => ({ id: uid(), ch })));
+    setCharObjects(
+      value.split("").map((ch) => ({ id: uid(), ch, animating: false }))
+    );
     prevValue.current = value;
   }, []);
 
@@ -62,13 +63,8 @@ export default function AnimatedTextarea({
 
     // Cursor at position 0 → special case
     if (cursorPos === 0) {
-      const first = charRefs.current[0];
-      if (first) {
-        const rect = first.getBoundingClientRect();
-        const parentRect = first.parentElement!.getBoundingClientRect();
-        cursorEl.style.left = "0px";
-        cursorEl.style.top = "0px";
-      }
+      cursorEl.style.left = "8px";
+      cursorEl.style.top = "8px";
       return;
     }
 
@@ -77,9 +73,12 @@ export default function AnimatedTextarea({
 
     const rect = target.getBoundingClientRect();
     const parentRect = target.parentElement!.getBoundingClientRect();
-
-    cursorEl.style.left = `${rect.right - parentRect.left}px`;
-    cursorEl.style.top = `${rect.top - parentRect.top + 8}px`;
+    const paddingLeft = 0;
+    const paddingTop = 2;
+    cursorEl.style.left = `${
+      rect.left - parentRect.left + rect.width + paddingLeft
+    }px`;
+    cursorEl.style.top = `${rect.top - parentRect.top + paddingTop}px`;
     console.log("cursorPos:", cursorPos);
     console.log("refs:", charRefs.current);
   }, [cursorPos, charObjects.length]);
@@ -116,26 +115,35 @@ export default function AnimatedTextarea({
     const added = newText
       .slice(start, end)
       .split("")
-      .map((ch) => ({ id: uid(), ch }));
+      .map((ch) => ({
+        id: uid(),
+        ch,
+        animating: true,
+      }));
 
     // Rebuild charObjects:
     //   [existing prefix] [new chars] [existing suffix]
     setCharObjects((prev) => {
-      const prefix = prev.slice(0, start);
-      const suffix = prev.slice(prev.length - s);
+      const prefix = prev
+        .slice(0, start)
+        .map((o) => ({ ...o, animating: false }));
+      const suffix = prev
+        .slice(prev.length - s)
+        .map((o) => ({ ...o, animating: false }));
       return [...prefix, ...added, ...suffix];
     });
 
-    // Track which indices should animate
-    const newIndices = Array.from({ length: end - start }, (_, i) => start + i);
-    setNewIndices(newIndices);
-
-    // Remove animation flags after fade-in
-    const timeout = setTimeout(() => setNewIndices([]), 300);
-
     prevValue.current = newText;
-    return () => clearTimeout(timeout);
   }, [value]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCharObjects((prev) =>
+        prev.map((obj) => ({ ...obj, animating: false }))
+      );
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [charObjects]);
 
   return (
     <div className="relative w-full">
@@ -159,26 +167,16 @@ export default function AnimatedTextarea({
             ref={(el) => {
               charRefs.current[i] = el;
             }}
-            className={newIndices.includes(i) ? "char" : ""}
+            className={c.animating ? "char" : ""}
           >
             {c.ch === "\n" ? <br /> : c.ch}
-
-            {/* Cursor */}
-            {cursorPos === i + 1 && (
-              <span
-                ref={cursorRef}
-                className="cursor inline-block w-[2px] h-4 bg-white ml-0.5"
-              />
-            )}
           </span>
         ))}
 
-        {cursorPos === 0 && (
-          <span
-            ref={cursorRef}
-            className="cursor inline-block w-[2px] h-4 bg-white absolute top-0 left-0"
-          />
-        )}
+        <div
+          ref={cursorRef}
+          className="cursor absolute w-[2px] h-4 bg-primary"
+        />
       </div>
     </div>
   );

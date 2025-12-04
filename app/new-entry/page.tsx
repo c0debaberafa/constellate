@@ -35,7 +35,7 @@ const NewEntry = () => {
 
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-12">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto">
         <header className="space-y-2">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -56,14 +56,14 @@ const NewEntry = () => {
           </div>
 
           <div className="space-y-1">
-            <p className="text-muted-foreground font-mono">
-              <em>&ldquo;Just show up at the page.&rdquo;</em> — Julia Cameron
-            </p>
-
-            {startTime && (
-              <p className="text-sm text-muted-foreground font-mono">
+            {startTime ? (
+              <p className="text-muted-foreground font-mono">
                 Started on {format(startTime, "EEEE, MMMM d, yyyy 'at' h:mm a")}{" "}
                 | Word count: {wordCount}
+              </p>
+            ) : (
+              <p className="text-muted-foreground font-mono">
+                <em>&ldquo;Just show up at the page.&rdquo;</em> — Julia Cameron
               </p>
             )}
           </div>
