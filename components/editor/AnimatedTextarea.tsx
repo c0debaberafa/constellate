@@ -31,6 +31,10 @@ export default function AnimatedTextarea({
 
   const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const cursorRef = useRef<HTMLDivElement>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [cursorPosition, setCursorPosition] = useState({ x: 8, y: 8 });
+  const isFirstRender = useRef(true);
   const uid = () => Math.random().toString(36).slice(2);
 
   // Initialize charObjects on first render or if value changes programmatically
@@ -44,12 +48,37 @@ export default function AnimatedTextarea({
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
     onCursorChange(e.target.selectionStart);
+    setIsTyping(true);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set isTyping to false after 1 second of no typing
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 1000);
   };
 
   const handleCursorMove = () => {
     const e = textareaRef.current;
     if (!e) return;
     onCursorChange(e.selectionStart);
+  };
+
+  const handleKeyDown = () => {
+    setIsTyping(true);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set isTyping to false after 1 second of no typing
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 1000);
   };
 
   useLayoutEffect(() => {
@@ -61,26 +90,33 @@ export default function AnimatedTextarea({
 
     if (!cursorEl) return;
 
+    let newX: number;
+    let newY: number;
+
     // Cursor at position 0 → special case
     if (cursorPos === 0) {
-      cursorEl.style.left = "8px";
-      cursorEl.style.top = "8px";
+      newX = 8;
+      newY = 8;
+    } else {
+      const target = charRefs.current[cursorPos - 1];
+      if (!target) return;
+
+      const rect = target.getBoundingClientRect();
+      const parentRect = target.parentElement!.getBoundingClientRect();
+      const paddingLeft = 0;
+      const paddingTop = 2;
+      newX = rect.left - parentRect.left + rect.width + paddingLeft;
+      newY = rect.top - parentRect.top + paddingTop;
+    }
+
+    // Skip animation on first render
+    if (isFirstRender.current) {
+      setCursorPosition({ x: newX, y: newY });
+      isFirstRender.current = false;
       return;
     }
 
-    const target = charRefs.current[cursorPos - 1];
-    if (!target) return;
-
-    const rect = target.getBoundingClientRect();
-    const parentRect = target.parentElement!.getBoundingClientRect();
-    const paddingLeft = 0;
-    const paddingTop = 2;
-    cursorEl.style.left = `${
-      rect.left - parentRect.left + rect.width + paddingLeft
-    }px`;
-    cursorEl.style.top = `${rect.top - parentRect.top + paddingTop}px`;
-    console.log("cursorPos:", cursorPos);
-    console.log("refs:", charRefs.current);
+    setCursorPosition({ x: newX, y: newY });
   }, [cursorPos, charObjects.length]);
 
   useLayoutEffect(() => {
@@ -141,9 +177,18 @@ export default function AnimatedTextarea({
       setCharObjects((prev) =>
         prev.map((obj) => ({ ...obj, animating: false }))
       );
-    }, 1000);
+    }, 8000);
     return () => clearTimeout(timer);
   }, [charObjects]);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="relative w-full">
@@ -153,6 +198,7 @@ export default function AnimatedTextarea({
         className="absolute top-0 left-0 w-full h-full font-mono opacity-0 resize-none overflow-hidden"
         value={value}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
         onKeyUp={handleCursorMove}
         onClick={handleCursorMove}
         placeholder={placeholder}
@@ -160,7 +206,7 @@ export default function AnimatedTextarea({
       />
 
       {/* MIRROR DISPLAY */}
-      <div className="relative p-2 pointer-events-none whitespace-pre-wrap font-mono text-white">
+      <div className="relative pointer-events-none whitespace-pre-wrap font-mono text-white">
         {charObjects.map((c, i) => (
           <span
             key={c.id}
@@ -175,7 +221,12 @@ export default function AnimatedTextarea({
 
         <div
           ref={cursorRef}
-          className="cursor absolute w-[2px] h-4 bg-primary"
+          className={`cursor absolute w-[4px] h-8 bg-primary cursor-slide ${
+            !isTyping ? "cursor-blink" : ""
+          }`}
+          style={{
+            transform: `translate(${cursorPosition.x}px, ${cursorPosition.y}px)`,
+          }}
         />
       </div>
     </div>

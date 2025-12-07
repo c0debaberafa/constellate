@@ -103,37 +103,45 @@
   /* Cursor blinking animation */
   @keyframes cursor-blink {
     0%,
+    100% {
+      opacity: 0.3;
+    }
     50% {
       opacity: 1;
-    }
-    51%,
-    100% {
-      opacity: 0;
     }
   }
 
   .cursor-blink {
-    animation: cursor-blink 1s step-end infinite;
+    animation: cursor-blink 1.5s ease-in-out infinite;
   }
 
   /* Character fade-in animation */
   @keyframes fadeIn {
     from {
+      color: hsl(var(--primary));
       opacity: 0;
     }
     to {
+      color: white;
       opacity: 1;
     }
   }
 
   .char {
-    opacity: 0;
+    color: hsl(var(--primary));
     animation: fadeIn 0.25s forwards;
-    will-change: opacity;
+    will-change: color;
   }
 
   .cursor {
     height: 1rem;
+    left: 0;
+    top: 0;
+  }
+
+  .cursor-slide {
+    transition: transform 0.15s ease-out;
+    will-change: transform;
   }
 
   @keyframes blink {
