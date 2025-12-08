@@ -177,7 +177,7 @@ export default function AnimatedTextarea({
       setCharObjects((prev) =>
         prev.map((obj) => ({ ...obj, animating: false }))
       );
-    }, 8000);
+    }, 10000);
     return () => clearTimeout(timer);
   }, [charObjects]);
 

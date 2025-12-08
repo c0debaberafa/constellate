@@ -20,12 +20,44 @@ const NewEntry = () => {
     }
   };
 
-  const handleSubmit = () => {
+  async function saveEntry() {
+    try {
+      const res = await fetch("/api/journal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          createdAt: startTime, // optional
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("API error:", errorText);
+        throw new Error(`Failed to save entry: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log("Saved:", data);
+      return data;
+    } catch (error) {
+      console.error("Error saving entry:", error);
+      throw error;
+    }
+  }
+
+  const handleSubmit = async () => {
     if (!content.trim()) return;
 
-    toast.success("Entry saved successfully");
-    setContent("");
-    setStartTime(null);
+    try {
+      await saveEntry();
+      toast.success("Entry saved successfully");
+      setContent("");
+      setStartTime(null);
+    } catch (error) {
+      toast.error("Failed to save entry. Please try again.");
+      console.error("Save error:", error);
+    }
   };
 
   const getWordCount = (text: string): number =>

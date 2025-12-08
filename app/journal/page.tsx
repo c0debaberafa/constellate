@@ -1,47 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import JournalEditor from "@/components/JournalEditor";
+import { useState, useEffect } from "react";
 import JournalList from "@/components/JournalList";
 import { JournalEntry } from "@/components/JournalEntryCard";
-import { Separator } from "@/components/ui/separator";
 import { BookOpen } from "lucide-react";
 
 export default function JournalPage() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleAddEntry = (content: string) => {
-    const newEntry: JournalEntry = {
-      id: crypto.randomUUID(),
-      content,
-      createdAt: new Date(),
+  useEffect(() => {
+    const fetchEntries = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await fetch("/api/journal");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch journal entries");
+        }
+
+        const data = await response.json();
+
+        // Convert date strings to Date objects
+        const entriesWithDates: JournalEntry[] = data.entries.map(
+          (entry: { id: string; content: string; createdAt: string }) => ({
+            id: entry.id,
+            content: entry.content,
+            createdAt: new Date(entry.createdAt),
+          })
+        );
+
+        setEntries(entriesWithDates);
+      } catch (err) {
+        console.error("Error fetching entries:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load journal entries"
+        );
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setEntries([newEntry, ...entries]);
-  };
 
-  const handleEditEntry = (content: string) => {
-    if (!editingEntry) return;
-
-    setEntries(
-      entries.map((entry) =>
-        entry.id === editingEntry.id
-          ? { ...entry, content, updatedAt: new Date() }
-          : entry
-      )
-    );
-    setEditingEntry(null);
-  };
-
-  const handleDeleteEntry = (id: string) => {
-    setEntries(entries.filter((entry) => entry.id !== id));
-  };
-
-  const startEditing = (entry: JournalEntry) => {
-    setEditingEntry(entry);
-    // window.scrollTo is fine because this is a client component
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    fetchEntries();
+  }, []);
 
   return (
     <div className="px-4 py-8 sm:px-6 sm:py-12">
@@ -58,27 +61,20 @@ export default function JournalPage() {
           </p>
         </header>
 
-        {editingEntry && (
-          <section className="space-y-4">
-            <h2 className="text-xl font-medium text-foreground font-mono">
-              Edit Entry
-            </h2>
-            <JournalEditor
-              onSubmit={handleEditEntry}
-              initialContent={editingEntry.content}
-              isEditing={true}
-              onCancel={() => setEditingEntry(null)}
-            />
-            <Separator className="my-8" />
-          </section>
-        )}
-
         <section>
-          <JournalList
-            entries={entries}
-            onEdit={startEditing}
-            onDelete={handleDeleteEntry}
-          />
+          {isLoading ? (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground text-lg">
+                Loading entries...
+              </p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <p className="text-destructive text-lg">{error}</p>
+            </div>
+          ) : (
+            <JournalList entries={entries} />
+          )}
         </section>
       </div>
     </div>

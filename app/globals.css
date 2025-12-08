@@ -104,7 +104,7 @@
   @keyframes cursor-blink {
     0%,
     100% {
-      opacity: 0.3;
+      opacity: 0.2;
     }
     50% {
       opacity: 1;
@@ -112,7 +112,7 @@
   }
 
   .cursor-blink {
-    animation: cursor-blink 1.5s ease-in-out infinite;
+    animation: cursor-blink 1.6 s ease-in-out infinite;
   }
 
   /* Character fade-in animation */
@@ -129,7 +129,7 @@
 
   .char {
     color: hsl(var(--primary));
-    animation: fadeIn 0.25s forwards;
+    animation: fadeIn 0.4s forwards;
     will-change: color;
   }
 
