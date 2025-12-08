@@ -5,19 +5,12 @@ import { PenSquare, BookOpen, Sparkles, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 
 const menuItems = [
@@ -32,79 +25,66 @@ export function AppSidebar() {
   const [mounted, setMounted] = useState(false);
 
   // Prevent hydration mismatch with next-themes
-  // This is a standard pattern for next-themes to prevent hydration errors
   useLayoutEffect(() => {
     setMounted(true);
   }, []);
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-center gap-2 px-2 py-4 group-data-[collapsible=icon]:px-0">
+    <TooltipProvider>
+      <aside className="fixed left-0 top-0 z-10 h-screen w-16  bg-sidebar flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-center h-16 ">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
             <BookOpen className="h-5 w-5 text-primary" />
           </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-lg font-semibold text-sidebar-foreground">
-              FRED
-            </span>
-            <span className="text-xs text-sidebar-foreground/60">
-              Focused Reflection Every Day
-            </span>
-          </div>
         </div>
-      </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={pathname === item.url}>
-                    <Link href={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      <span className="group-data-[collapsible=icon]:hidden">
-                        {item.title}
-                      </span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+        {/* Navigation */}
+        <nav className="flex-1 flex flex-col items-center py-4 gap-2">
+          {menuItems.map((item) => (
+            <Tooltip key={item.title}>
+              <TooltipTrigger asChild>
+                <Link
+                  href={item.url}
+                  className={`flex items-center justify-center h-10 w-10 rounded-md transition-colors ${
+                    pathname === item.url
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{item.title}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </nav>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        <div
-          className="p-2 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center"
-          suppressHydrationWarning
-        >
-          <Button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-          >
-            {mounted && theme === "dark" ? (
-              <>
-                <Sun className="h-4 w-4 group-data-[collapsible=icon]:mr-0 mr-2" />
-                <span className="group-data-[collapsible=icon]:hidden">
-                  Light Mode
-                </span>
-              </>
-            ) : (
-              <>
-                <Moon className="h-4 w-4 group-data-[collapsible=icon]:mr-0 mr-2" />
-                <span className="group-data-[collapsible=icon]:hidden">
-                  Dark Mode
-                </span>
-              </>
-            )}
-          </Button>
+        {/* Footer */}
+        <div className="p-2" suppressHydrationWarning>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+              >
+                {mounted && theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>{mounted && theme === "dark" ? "Light Mode" : "Dark Mode"}</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
-      </SidebarFooter>
-    </Sidebar>
+      </aside>
+    </TooltipProvider>
   );
 }
