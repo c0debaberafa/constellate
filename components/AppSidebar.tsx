@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { useTyping } from "@/contexts/TypingContext";
 
 const menuItems = [
   { title: "New Entry", url: "/new-entry", icon: PenSquare },
@@ -23,6 +24,8 @@ export function AppSidebar() {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const { isTyping, isMouseMoving } = useTyping();
+  const shouldHideUI = isTyping && !isMouseMoving;
 
   // Prevent hydration mismatch with next-themes
   useLayoutEffect(() => {
@@ -31,7 +34,11 @@ export function AppSidebar() {
 
   return (
     <TooltipProvider>
-      <aside className="fixed left-0 top-0 z-10 h-screen w-16  bg-sidebar flex flex-col">
+      <aside
+        className={`fixed left-0 top-0 z-10 h-screen w-16 bg-sidebar flex flex-col transition-opacity duration-300 ${
+          shouldHideUI ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
         {/* Header */}
         <div className="flex items-center justify-center h-16 ">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -46,17 +53,23 @@ export function AppSidebar() {
               <TooltipTrigger asChild>
                 <Link
                   href={item.url}
-                  className={`flex items-center justify-center h-10 w-10 rounded-md transition-colors ${
+                  className={`group flex items-center justify-center h-10 w-10 rounded-md transition-colors ${
                     pathname === item.url
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      ? "bg-primary/10"
+                      : "hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground "
                   }`}
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon
+                    className={`h-5 w-5 group-hover:text-primary ${
+                      pathname === item.url
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>{item.title}</p>
+              <TooltipContent side="right" className="">
+                <p className="font-bold">{item.title}</p>
               </TooltipContent>
             </Tooltip>
           ))}

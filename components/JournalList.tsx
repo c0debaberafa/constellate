@@ -18,7 +18,7 @@ export default function JournalList({ entries }: JournalListProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {entries.map((entry) => (
         <JournalEntryCard key={entry.id} entry={entry} />
       ))}

@@ -3,6 +3,7 @@
 import "./globals.css";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeProvider } from "next-themes";
+import { TypingProvider } from "@/contexts/TypingContext";
 
 export default function RootLayout({
   children,
@@ -13,10 +14,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground antialiased font-mono">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <div className="flex min-h-screen w-full">
-            <AppSidebar />
-            <main className="flex-1 ml-16 flex justify-center">{children}</main>
-          </div>
+          <TypingProvider>
+            <div className="flex min-h-screen w-full">
+              <AppSidebar />
+              <main className="flex-1 ml-16 flex justify-center">
+                {children}
+              </main>
+            </div>
+          </TypingProvider>
         </ThemeProvider>
       </body>
     </html>
