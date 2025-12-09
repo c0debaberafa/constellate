@@ -1,7 +1,7 @@
 "use client";
 
 import "./globals.css";
-import { AppSidebar } from "@/components/AppSidebar";
+import { TopNavigation } from "@/components/TopNavigation";
 import { ThemeProvider } from "next-themes";
 import { TypingProvider } from "@/contexts/TypingContext";
 
@@ -15,12 +15,8 @@ export default function RootLayout({
       <body className="bg-background text-foreground antialiased font-mono">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TypingProvider>
-            <div className="flex min-h-screen w-full">
-              <AppSidebar />
-              <main className="flex-1 ml-16 flex justify-center">
-                {children}
-              </main>
-            </div>
+            <TopNavigation />
+            <main className="flex justify-center min-h-screen">{children}</main>
           </TypingProvider>
         </ThemeProvider>
       </body>

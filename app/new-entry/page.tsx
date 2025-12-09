@@ -98,9 +98,9 @@ const NewEntry = () => {
   }, [cursorPos, content, isTyping]);
 
   return (
-    <div className="w-[60%] px-0 sm:px-4 py-8">
-      <header className="space-y-2 sticky top-0 mb-8 bg-background z-10 pt-4">
-        <div className="">
+    <div className="w-[80%]">
+      <header className="sticky top-0 h-36 mb-4 bg-background z-10">
+        <div className="absolute bottom-0 w-full py-4">
           <p className="mb-2 text-muted-foreground font-mono">
             {wordCount} / 750
           </p>

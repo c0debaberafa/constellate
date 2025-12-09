@@ -47,10 +47,10 @@ export default function JournalPage() {
   }, []);
 
   return (
-    <div className="px-4 py-8 sm:px-6 sm:py-12">
+    <div className="justify-center md:w-[80%] px-4 py-8 mt-16 sm:px-6 sm:py-12">
       <div className="max-w-6xl mx-auto space-y-8">
-        <header className="space-y-2">
-          <div className="flex items-center gap-3">
+        <header className="space-y-2 text-center">
+          <div className="flex gap-3 justify-center items-center">
             <BookOpen className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-semibold text-foreground font-mono">
               Journal Entries
