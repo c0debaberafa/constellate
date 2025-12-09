@@ -60,7 +60,7 @@ export default function MonkeyEditor({
     // Set isTyping to false after 1 second of no typing
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-    }, 5000);
+    }, 4000);
   };
 
   const handleCursorMove = () => {
@@ -97,8 +97,8 @@ export default function MonkeyEditor({
 
     // Cursor at position 0 → special case
     if (cursorPos === 0) {
-      newX = 8;
-      newY = 8;
+      newX = 0;
+      newY = 4;
     } else {
       const target = charRefs.current[cursorPos - 1];
       if (!target) return;

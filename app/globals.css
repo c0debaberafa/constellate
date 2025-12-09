@@ -100,11 +100,11 @@
 }
 
 @layer utilities {
-  /* Cursor blinking animation */
+  /* Cursor blinking animation - gentle pulse */
   @keyframes cursor-blink {
     0%,
     100% {
-      opacity: 0.2;
+      opacity: 0;
     }
     50% {
       opacity: 1;
@@ -112,7 +112,7 @@
   }
 
   .cursor-blink {
-    animation: cursor-blink 1.6 s ease-in-out infinite;
+    animation: cursor-blink 1s ease-in-out infinite;
   }
 
   /* Character fade-in animation */

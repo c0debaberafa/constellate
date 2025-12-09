@@ -67,7 +67,6 @@ const NewEntry = () => {
   const wordCount = getWordCount(content);
   const shouldHideUI = isTyping && !isMouseMoving;
   const progress = Math.min((wordCount / 750) * 100, 100);
-  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to keep cursor centered
   useEffect(() => {
