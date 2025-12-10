@@ -3,7 +3,7 @@ import { Sparkles, TrendingUp, Brain, Heart } from "lucide-react";
 
 const Reflections = () => {
   return (
-    <div className="px-4 py-8 sm:px-6 sm:py-12">
+    <div className="w-[80%] py-8 sm:px-6 sm:py-12 mt-16">
       <div className="max-w-6xl mx-auto space-y-8">
         <header className="space-y-2">
           <div className="flex items-center gap-3">

@@ -22,7 +22,7 @@ export function TopNavigation() {
 
   return (
     <nav
-      className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 h-16 w-[95%] md:w-[80%] max-w-6xl bg-sidebar/80 backdrop-blur-md border border-sidebar-border rounded-lg shadow-lg flex items-center justify-between px-2 md:px-4 transition-opacity duration-300 ${
+      className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 h-16 w-[95%] md:w-[80%] max-w-6xl bg-black/20 backdrop-blur-md border border-sidebar-border rounded-lg shadow-lg flex items-center justify-between px-2 md:px-4 transition-opacity duration-300 ${
         shouldHideUI ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
@@ -30,7 +30,7 @@ export function TopNavigation() {
       <div className="flex items-center gap-1 md:gap-2">
         <Link
           href="/new-entry"
-          className={`flex items-center justify-center h-9 px-2 md:px-4 rounded-md transition-colors ${
+          className={`flex items-center justify-center h-9 px-3 rounded-md transition-colors ${
             pathname === "/new-entry"
               ? "bg-primary/10 text-primary"
               : "hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground text-muted-foreground"
@@ -43,7 +43,7 @@ export function TopNavigation() {
         </Link>
         <Link
           href="/journal"
-          className={`flex items-center justify-center h-9 px-2 md:px-4 rounded-md transition-colors ${
+          className={`flex items-center justify-center h-9 px-3 rounded-md transition-colors ${
             pathname === "/journal"
               ? "bg-primary/10 text-primary"
               : "hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground text-muted-foreground"
@@ -57,7 +57,7 @@ export function TopNavigation() {
       {/* Center - BookOpen Logo */}
       <div className="absolute left-1/2 -translate-x-1/2">
         <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg">
-          <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+          <BookOpen className="h-6 w-6 text-primary" />
         </div>
       </div>
 
@@ -65,7 +65,7 @@ export function TopNavigation() {
       <div className="flex items-center gap-1 md:gap-2">
         <Link
           href="/reflections"
-          className={`flex items-center justify-center h-9 px-2 md:px-4 rounded-md transition-colors ${
+          className={`flex items-center justify-center h-9 px-3 rounded-md transition-colors ${
             pathname === "/reflections"
               ? "bg-primary/10 text-primary"
               : "hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground text-muted-foreground"

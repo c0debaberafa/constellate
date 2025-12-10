@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import MonkeyEditor from "@/components/MonkeyEditor";
 import { toast } from "sonner";
@@ -98,9 +99,9 @@ const NewEntry = () => {
   }, [cursorPos, content, isTyping]);
 
   return (
-    <div className="w-[80%]">
+    <div className="w-[90%] md:w-[60%]">
       <header className="sticky top-0 h-36 mb-4 bg-background z-10">
-        <div className="absolute bottom-0 w-full py-4">
+        <div className="absolute bottom-0 w-full py-2">
           <p className="mb-2 text-muted-foreground font-mono">
             {wordCount} / 750
           </p>
@@ -113,7 +114,7 @@ const NewEntry = () => {
           </div>
         </div>
         {/* Gradient fade - positioned at bottom of header to fade content below */}
-        <div className="absolute -bottom-8 left-0 right-0 h-8 bg-gradient-to-b from-background to-transparent≈ pointer-events-none z-20" />
+        <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none z-20" />
       </header>
 
       <MonkeyEditor
@@ -130,15 +131,22 @@ const NewEntry = () => {
           shouldHideUI ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
       >
-        <Button
-          onClick={handleSubmit}
-          disabled={!content.trim()}
-          size="lg"
-          className="px-4 py-2 border border-muted-foreground bg-primary-background hover:border-primary text-muted-foreground hover:text-primary-foreground"
-        >
-          <Save />
-          Save
-        </Button>
+        <div className="flex flex-col gap-4">
+          <Button
+            onClick={handleSubmit}
+            disabled={!content.trim()}
+            size="lg"
+            className="px-4 py-2 w-32 border border-muted-foreground bg-primary-background hover:border-primary text-muted-foreground hover:text-primary-foreground"
+          >
+            <Save />
+            Save
+          </Button>
+          {startTime && (
+            <span className="text-xs text-muted-foreground">
+              Started {format(startTime, "EEEE, h:mm a d.MM.yyyy")}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

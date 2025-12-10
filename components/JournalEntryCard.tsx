@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { MoreVertical } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,13 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { X } from "lucide-react";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export interface JournalEntry {
   id: string;
@@ -29,110 +37,121 @@ export interface JournalEntry {
 interface JournalEntryCardProps {
   entry: JournalEntry;
   maxLength?: number;
+  onDelete?: (id: string) => Promise<void>;
 }
-
-const DEFAULT_MAX_LENGTH = 240;
 
 export default function JournalEntryCard({
   entry,
-  maxLength = DEFAULT_MAX_LENGTH,
+  onDelete,
 }: JournalEntryCardProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const truncatedContent =
-    entry.content.length > maxLength
-      ? entry.content.slice(0, maxLength) + "..."
-      : entry.content;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCardClick = () => {
-    setIsDialogOpen(true);
+    setIsExpanded(!isExpanded);
   };
 
   const handleDropdownClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!onDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await onDelete(entry.id);
+      setIsDeleteDialogOpen(false);
+      setIsExpanded(false);
+    } catch (error) {
+      console.error("Error deleting entry:", error);
+      // Error is already handled by the parent component via toast
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <>
-      <Card
-        className="p-6 hover:shadow-md transition-smooth relative cursor-pointer w-full h-full"
-        onClick={handleCardClick}
-      >
-        <div className="space-y-4">
-          <time className="text-sm text-foreground font-medium">
-            {format(entry.createdAt, "EEEE, d.MM.yyyy h:mm a")}
-          </time>
-          <p className="text-muted-foreground font-mono text-xs leading-relaxed whitespace-pre-wrap">
-            {truncatedContent}
-          </p>
-        </div>
-        <div onClick={handleDropdownClick}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute bottom-2 right-2 h-8 w-8"
-              >
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onSelect={() => {}}>
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </Card>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent
-          className="w-full max-w-2xl max-h-[85vh]"
-          showCloseButton={false}
-        >
-          <DialogHeader className="flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-sm text-foreground font-medium">
-                {format(entry.createdAt, "EEEE, d.MM.yyyy h:mm a")}
-              </DialogTitle>
-              <DialogClose asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-8 w-8 opacity-70 hover:opacity-100"
-                >
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </DialogClose>
-            </div>
-          </DialogHeader>
-          <div className="mt-4 pb-12 overflow-y-auto flex-1 min-h-0">
-            <p className="text-muted-foreground font-mono text-sm leading-relaxed whitespace-pre-wrap">
-              {entry.content}
-            </p>
-          </div>
-          <div
-            onClick={handleDropdownClick}
-            className="absolute bottom-2 right-2"
-          >
+      <Card className="cursor-pointer gap-2" onClick={handleCardClick}>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <CardTitle className="flex-1">
+            <time className="text-md text-foreground font-semibold">
+              {format(entry.createdAt, "EEEE, d MMM yyyy h:mm a")}
+            </time>
+          </CardTitle>
+          <div onClick={handleDropdownClick} className="flex-shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon-sm" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreVertical className="hover:text-red-500 text-muted-foreground h-4 w-4" />
                   <span className="sr-only">Open menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem variant="destructive" onSelect={() => {}}>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={handleDeleteClick}
+                  disabled={isDeleting}
+                >
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardHeader>
+
+        <CardContent>
+          <p className="text-primary text-md font-regular mb-4">
+            Generating summary...
+          </p>
+          <div className="space-y-8 overflow-hidden">
+            <div
+              className={`transition-all duration-300 ease-in-out ${
+                isExpanded ? "max-h-[5000px]" : ""
+              }`}
+            >
+              <p
+                className={`text-muted-foreground font-mono text-sm leading-relaxed whitespace-pre-wrap ${
+                  !isExpanded ? "line-clamp-2" : ""
+                }`}
+              >
+                {entry.content}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Entry</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this entry? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

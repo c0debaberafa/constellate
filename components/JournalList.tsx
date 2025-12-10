@@ -1,12 +1,14 @@
 "use client";
 
 import JournalEntryCard, { JournalEntry } from "./JournalEntryCard";
+import { BookOpen } from "lucide-react";
 
 interface JournalListProps {
   entries: JournalEntry[];
+  onDelete?: (id: string) => Promise<void>;
 }
 
-export default function JournalList({ entries }: JournalListProps) {
+export default function JournalList({ entries, onDelete }: JournalListProps) {
   if (entries.length === 0) {
     return (
       <div className="text-center py-16">
@@ -18,9 +20,9 @@ export default function JournalList({ entries }: JournalListProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4">
       {entries.map((entry) => (
-        <JournalEntryCard key={entry.id} entry={entry} />
+        <JournalEntryCard key={entry.id} entry={entry} onDelete={onDelete} />
       ))}
     </div>
   );
