@@ -56,25 +56,35 @@ export function TopNavigation() {
 
       {/* Center - BookOpen Logo */}
       <div className="absolute left-1/2 -translate-x-1/2">
-        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg">
-          <BookOpen className="h-6 w-6 text-primary" />
+        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg cursor-pointer text-muted-foreground hover:bg-sidebar-accent/40 hover:text-white transition-colors">
+          <svg
+            viewBox="-12 -12 269.2 269.2"
+            aria-label="Fred logo"
+            className="h-6 w-6 "
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={32}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polygon points="9 236.2 9 9 122.6 122.6 9 236.2" />
+            <polygon points="236.2 236.2 236.2 9 122.6 122.6 236.2 236.2" />
+          </svg>
         </div>
       </div>
 
-      {/* Right side - Reflections and Theme Toggle */}
+      {/* Right side - Insights and Theme Toggle */}
       <div className="flex items-center gap-1 md:gap-2">
         <Link
-          href="/reflections"
+          href="/insights"
           className={`flex items-center justify-center h-9 px-3 rounded-md transition-colors ${
-            pathname === "/reflections"
+            pathname === "/insights"
               ? "bg-primary/10 text-primary"
               : "hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground text-muted-foreground"
           }`}
         >
           <Sparkles className="h-4 w-4 md:mr-2" />
-          <span className="hidden md:inline text-sm font-medium">
-            Reflections
-          </span>
+          <span className="hidden md:inline text-sm font-medium">Insights</span>
         </Link>
         <Button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

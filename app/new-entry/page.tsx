@@ -99,7 +99,30 @@ const NewEntry = () => {
   }, [cursorPos, content, isTyping]);
 
   return (
-    <div className="w-[90%] md:w-[60%]">
+    <div className="w-[80%] md:w-[60%]">
+      {/* Primary colored logo that appears when TopNavigation fades out */}
+      <div
+        className={`fixed top-12 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 transition-opacity duration-300 ${
+          shouldHideUI ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg text-primary">
+          <svg
+            viewBox="-12 -12 269.2 269.2"
+            aria-label="Fred logo"
+            className={`h-6 w-6 ${isTyping ? "typing-blink" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={32}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polygon points="9 236.2 9 9 122.6 122.6 9 236.2" />
+            <polygon points="236.2 236.2 236.2 9 122.6 122.6 236.2 236.2" />
+          </svg>
+        </div>
+      </div>
+
       <header className="sticky top-0 h-36 mb-4 bg-background z-10">
         <div className="absolute bottom-0 w-full py-2">
           <p className="mb-2 text-muted-foreground font-mono">

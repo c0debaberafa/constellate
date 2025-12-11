@@ -111,8 +111,22 @@
     }
   }
 
+  @keyframes typing-blink {
+    0%,
+    100% {
+      color: hsl(var(--muted));
+    }
+    50% {
+      color: hsl(var(--primary));
+    }
+  }
+
   .cursor-blink {
-    animation: cursor-blink 0.8s ease-in-out infinite;
+    animation: cursor-blink 1s ease-in-out infinite;
+  }
+
+  .typing-blink {
+    animation: typing-blink 2s ease-in-out infinite;
   }
 
   /* Character fade-in animation */

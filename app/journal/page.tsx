@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import JournalList from "@/components/JournalList";
 import JournalStats from "@/components/JournalStats";
 import { JournalEntry } from "@/components/JournalEntryCard";
-import { BookOpen } from "lucide-react";
+import { Target } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { Card } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, CartesianGrid } from "recharts";
 
 interface JournalStatsData {
   avgWordCount: number;
@@ -77,6 +84,39 @@ export default function JournalPage() {
     fetchStats();
   }, []);
 
+  // Prepare chart data: word count by day of month
+  const chartData = useMemo(() => {
+    // Get current month
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // Initialize data for all days of the month
+    const data = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      wordCount: 0,
+    }));
+
+    // Group entries by day and calculate word counts
+    entries.forEach((entry) => {
+      const entryDate = new Date(entry.createdAt);
+      if (
+        entryDate.getMonth() === currentMonth &&
+        entryDate.getFullYear() === currentYear
+      ) {
+        const day = entryDate.getDate();
+        const wordCount = entry.content
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean).length;
+        data[day - 1].wordCount += wordCount;
+      }
+    });
+
+    return data;
+  }, [entries]);
+
   const handleDelete = async (id: string) => {
     try {
       const response = await fetch(`/api/journal?id=${id}`, {
@@ -94,6 +134,7 @@ export default function JournalPage() {
       );
 
       toast.success("Entry deleted successfully");
+      window.location.reload();
     } catch (error) {
       console.error("Error deleting entry:", error);
       toast.error(
@@ -106,27 +147,60 @@ export default function JournalPage() {
   };
 
   return (
-    <div className="justify-center w-[95%] md:w-[80%] py-4 mt-16 sm:py-12">
+    <div className="justify-start w-[95%] md:w-[80%] mt-8 px-4 py-16">
       <div className="max-w-6xl mx-auto space-y-4">
-        <header className="space-y-2 text-center">
-          <div className="flex gap-3 justify-center items-center">
-            <BookOpen className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-semibold text-primary font-mono">
-              Journal
-            </h1>
+        <header className="space-y-4 text-start">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Target className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-2xl font-semibold text-primary font-mono">
+              Dashboard
+            </h2>
+          </div>
+          <div className="flex flex-col justify-center items-start gap-4 mt-6">
+            <Card className="w-full bg-black border-0 px-6">
+              <ChartContainer
+                config={{
+                  wordCount: {
+                    label: "Word Count",
+                    color: "hsl(var(--primary))",
+                  },
+                }}
+                className="h-[240px] w-full"
+              >
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickFormatter={(value) => `${value}`} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar
+                    dataKey="wordCount"
+                    fill="var(--color-wordCount)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            </Card>
+            {stats && (
+              <JournalStats
+                avgWordCount={stats.avgWordCount}
+                currentStreak={stats.currentStreak}
+                longestStreak={stats.longestStreak}
+                totalEntries={stats.totalEntries}
+              />
+            )}
           </div>
         </header>
 
-        {stats && (
-          <JournalStats
-            avgWordCount={stats.avgWordCount}
-            currentStreak={stats.currentStreak}
-            longestStreak={stats.longestStreak}
-            totalEntries={stats.totalEntries}
-          />
-        )}
-
         <section>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Target className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-2xl font-semibold text-primary font-mono">
+              Entries
+            </h2>
+          </div>
           {isLoading ? (
             <div className="flex justify-center">
               <div className="flex flex-row items-center gap-2">

@@ -3,13 +3,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { MoreVertical } from "lucide-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -78,7 +73,13 @@ export default function JournalEntryCard({
 
   return (
     <>
-      <Card className="cursor-pointer gap-2" onClick={handleCardClick}>
+      <Card
+        className={cn(
+          "cursor-pointer gap-2 hover:border-primary/40 transition-colors",
+          isExpanded && "border-primary/40"
+        )}
+        onClick={handleCardClick}
+      >
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <CardTitle className="flex-1">
             <time className="text-md text-foreground font-semibold">
@@ -107,7 +108,7 @@ export default function JournalEntryCard({
         </CardHeader>
 
         <CardContent>
-          <p className="text-primary text-md font-regular mb-4">
+          <p className="text-primary text-md font-semibold mb-4">
             Generating summary...
           </p>
           <div className="space-y-8 overflow-hidden">
