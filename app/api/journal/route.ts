@@ -1,5 +1,81 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateJournalInsights } from "@/lib/ai/gemini";
+
+// helper function to sleep for a given number of milliseconds
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// async backoff functon to respect tier limits
+async function processMissingInsights(
+  missingAI: Awaited<ReturnType<typeof prisma.journalEntry.findMany>>
+) {
+  console.log(`Starting insight generation for ${missingAI.length} entries...`);
+
+  const maxRetries = 3; // prevent infinite loops
+  const initialDelayMs = 20000; // start with a 20-second delay (to respect the free tier limit)
+
+  for (const entry of missingAI) {
+    let attempt = 0;
+    let success = false;
+
+    // Retry block for each individual entry
+    while (attempt < maxRetries && !success) {
+      attempt++;
+      // generate journal insights and update database
+      try {
+        // pauses the loop until the Promise resolves
+        const aiInsights = await generateJournalInsights(entry.content);
+
+        // only runs if the AI call succeeded
+        await prisma.journalEntry.update({
+          where: { id: entry.id },
+          data: {
+            title: aiInsights.title,
+            summary: aiInsights.summary,
+            highlights: aiInsights.highlights,
+          },
+        });
+
+        console.log(`✅ Success for entry ID: ${entry.id}`);
+        success = true; // exit the retry loop
+      } catch (error) {
+        // Check for the 429 rate limit error
+        if (error instanceof Error && error.message.includes("429")) {
+          const delay = initialDelayMs * Math.pow(2, attempt - 1); // exponential backoff
+          const waitTime = Math.min(delay, 60000); // max wait time of 60 seconds
+
+          console.warn(
+            `🛑 Rate limit hit for ID ${
+              entry.id
+            } (Attempt ${attempt}/${maxRetries}). Waiting ${
+              waitTime / 1000
+            }s...`
+          );
+
+          await sleep(waitTime); // AWAIT the pause
+
+          if (attempt === maxRetries) {
+            console.error(
+              `❌ Permanent failure for entry ID ${entry.id} after ${maxRetries} retries.`
+            );
+          }
+        } else {
+          // Handle other errors (Prisma, JSON parsing, etc.)
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            `❌ Non-retryable error for ID ${entry.id}:`,
+            errorMessage
+          );
+          success = true; // Stop retrying this entry
+        }
+      }
+    }
+  }
+  console.log("Insight processing complete.");
+}
 
 export async function POST(req: Request) {
   try {
@@ -35,6 +111,21 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    const missingAI = entries.filter(
+      (e) => !e.summary || !e.title || !e.highlights
+    );
+
+    // Trigger background processing without awaiting it
+    // This allows the response to return immediately while insights generate in the background
+    if (missingAI.length > 0) {
+      // Fire and forget - don't await this
+      processMissingInsights(missingAI).catch((error) => {
+        // Log errors but don't block the response
+        console.error("Background insight generation error:", error);
+      });
+    }
+
+    // Return entries immediately, even if some are still generating insights
     return NextResponse.json({ entries }, { status: 200 });
   } catch (err) {
     console.error("GET /api/journal error", err);

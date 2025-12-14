@@ -126,7 +126,7 @@
   }
 
   .typing-blink {
-    animation: typing-blink 2s ease-in-out infinite;
+    animation: typing-blink 4s ease-in-out infinite;
   }
 
   /* Character fade-in animation */

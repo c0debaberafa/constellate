@@ -1,21 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { PenSquare, BookOpen, Sparkles, Moon, Sun } from "lucide-react";
+import {
+  PenSquare,
+  BookOpen,
+  Sparkles,
+  Moon,
+  CircleUserRound,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useTyping } from "@/contexts/TypingContext";
 
 export function TopNavigation() {
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const pathname = usePathname();
   const { isTyping, isMouseMoving } = useTyping();
   const shouldHideUI = isTyping && !isMouseMoving;
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch with next-themes
+  // Track mount state to prevent hydration mismatch between server and client.
+  // This is a standard pattern for theme-dependent rendering in Next.js.
+  // The linter warning can be ignored as this is necessary to prevent hydration errors.
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -93,8 +101,8 @@ export function TopNavigation() {
           className="h-9 w-9"
           suppressHydrationWarning
         >
-          {mounted && theme === "dark" ? (
-            <Sun className="h-4 w-4" />
+          {mounted && resolvedTheme === "dark" ? (
+            <CircleUserRound className="h-4 w-4" />
           ) : (
             <Moon className="h-4 w-4" />
           )}

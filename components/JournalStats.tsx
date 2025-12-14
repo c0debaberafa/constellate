@@ -15,25 +15,25 @@ export default function JournalStats({
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full mb-8">
-        <div className="bg-card rounded-lg p-6 bg-black">
+        <div className=" rounded-lg p-6 bg-black">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             Current Streak
           </h3>
           <p className="text-2xl font-semibold text-primary">{currentStreak}</p>
         </div>
-        <div className="bg-card bg-black rounded-lg p-6">
+        <div className=" bg-black rounded-lg p-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             Longest Streak
           </h3>
           <p className="text-2xl font-semibold text-primary">{longestStreak}</p>
         </div>
-        <div className="bg-card bg-black rounded-lg p-6">
+        <div className=" bg-black rounded-lg p-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             Total Entries
           </h3>
           <p className="text-2xl font-semibold text-primary">{totalEntries}</p>
         </div>
-        <div className="bg-card bg-black rounded-lg p-6">
+        <div className=" bg-black rounded-lg p-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             Average Word Count
           </h3>

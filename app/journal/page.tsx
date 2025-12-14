@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import JournalList from "@/components/JournalList";
 import JournalStats from "@/components/JournalStats";
 import { JournalEntry } from "@/components/JournalEntryCard";
-import { Target } from "lucide-react";
+import { Target, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Card } from "@/components/ui/card";
@@ -28,6 +28,16 @@ export default function JournalPage() {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<JournalStatsData | null>(null);
 
+  // Helper function to map API response to JournalEntry format
+  const mapEntry = (entry: any): JournalEntry => ({
+    id: entry.id,
+    content: entry.content,
+    createdAt: new Date(entry.createdAt),
+    title: entry.title,
+    summary: entry.summary,
+    highlights: entry.highlights,
+  });
+
   useEffect(() => {
     const fetchEntries = async () => {
       try {
@@ -41,14 +51,8 @@ export default function JournalPage() {
 
         const data = await response.json();
 
-        // Convert date strings to Date objects
-        const entriesWithDates: JournalEntry[] = data.entries.map(
-          (entry: { id: string; content: string; createdAt: string }) => ({
-            id: entry.id,
-            content: entry.content,
-            createdAt: new Date(entry.createdAt),
-          })
-        );
+        // Map entries with all fields including insights
+        const entriesWithDates: JournalEntry[] = data.entries.map(mapEntry);
 
         setEntries(entriesWithDates);
       } catch (err) {
@@ -63,6 +67,67 @@ export default function JournalPage() {
 
     fetchEntries();
   }, []);
+
+  // Polling effect: Check for updated insights every 4 seconds
+  // Only polls entries that are missing insights
+  useEffect(() => {
+    // Check if there are any entries missing insights
+    const hasMissingInsights = entries.some(
+      (entry) => !entry.summary || !entry.title || !entry.highlights
+    );
+
+    // If all entries have insights, don't poll
+    if (!hasMissingInsights) {
+      return;
+    }
+
+    // Set up polling interval (4 seconds)
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch("/api/journal");
+
+        if (!response.ok) {
+          // Silently fail - don't show error for polling
+          return;
+        }
+
+        const data = await response.json();
+        const updatedEntries: JournalEntry[] = data.entries.map(mapEntry);
+
+        // Update entries state, merging new insights with existing entries
+        setEntries((prevEntries) => {
+          // Create a map of existing entries for quick lookup
+          const entryMap = new Map(prevEntries.map((e) => [e.id, e]));
+
+          // Update with new data, preserving any local state
+          return updatedEntries.map((updatedEntry) => {
+            const existing = entryMap.get(updatedEntry.id);
+            // If the entry now has insights that it didn't have before, update it
+            if (
+              existing &&
+              (!existing.title || !existing.summary || !existing.highlights) &&
+              (updatedEntry.title ||
+                updatedEntry.summary ||
+                updatedEntry.highlights)
+            ) {
+              // Entry got new insights - return the updated version
+              return updatedEntry;
+            }
+            // Otherwise, keep the existing entry (preserves any local UI state)
+            return existing || updatedEntry;
+          });
+        });
+      } catch (err) {
+        // Silently fail during polling - don't disrupt the UI
+        console.error("Polling error (silent):", err);
+      }
+    }, 4000); // Poll every 4 seconds
+
+    // Cleanup: stop polling when component unmounts or when all insights are ready
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [entries]); // Re-run when entries change (to check if polling is still needed)
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -147,7 +212,7 @@ export default function JournalPage() {
   };
 
   return (
-    <div className="justify-start w-[95%] md:w-[80%] mt-8 px-4 py-16">
+    <div className="justify-start w-[95%] md:w-[80%] mt-12 px-4 py-16">
       <div className="max-w-6xl mx-auto space-y-4">
         <header className="space-y-4 text-start">
           <div className="flex items-center gap-3">
@@ -195,7 +260,7 @@ export default function JournalPage() {
         <section>
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-xl bg-primary/10">
-              <Target className="w-5 h-5 text-primary" />
+              <BookOpen className="w-5 h-5 text-primary" />
             </div>
             <h2 className="text-2xl font-semibold text-primary font-mono">
               Entries

@@ -40,7 +40,7 @@ export default function StrengthsShadows({
       </div>
 
       <p className="text-muted-foreground mb-6 font-mono">
-        The light you stand in, and the darkness you have to leave behind.
+        The light you stand in, and the darkness behind you.
       </p>
 
       {isEmpty ? (
