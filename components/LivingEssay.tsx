@@ -15,6 +15,7 @@ export default function LivingEssay({
   isEmpty = false,
 }: LivingEssayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const sampleContent = `Your journal entries over the past few months reveal a person in beautiful transition. There's a recurring thread of seeking authenticity — not the performative kind, but the quiet, honest kind that emerges when no one is watching.
 
@@ -59,6 +60,10 @@ What strikes me most is your growing capacity for self-compassion. Earlier entri
   const previewParagraphs = paragraphs.slice(0, 2);
   const hasMore = paragraphs.length > 2;
 
+  const handleCardClick = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <section className="mb-12">
       <div className="flex items-center gap-3 mb-4">
@@ -75,17 +80,25 @@ What strikes me most is your growing capacity for self-compassion. Earlier entri
       </p>
 
       <Card
-        className={`p-8 hover:border-primary/40 transition-colors ', ${
-          isExpanded ? "border-primary/40" : ""
-        }`}
-        onClick={() => setIsExpanded(!isExpanded)}
+        className={cn(
+          "cursor-pointer p-8 transition",
+          isExpanded ? "border-white/40" : "hover:border-primary/40"
+        )}
+        onClick={handleCardClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         <div className="prose prose-lg max-w-none">
           {(isExpanded ? paragraphs : previewParagraphs).map(
             (paragraph, index) => (
               <p
                 key={index}
-                className="text-foreground/90 leading-relaxed mb-4 last:mb-0 font-mono"
+                className={cn(
+                  "leading-relaxed mb-4 last:mb-0 font-mono whitespace-pre-line transition-colors duration-200",
+                  isHovered || isExpanded
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                )}
               >
                 {paragraph}
               </p>
@@ -95,7 +108,10 @@ What strikes me most is your growing capacity for self-compassion. Earlier entri
 
         {hasMore && (
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
             className="mt-6 flex items-center gap-2 text-primary hover:text-primary/80 transition-colors group font-mono"
           >
             <span className="text-sm font-medium">

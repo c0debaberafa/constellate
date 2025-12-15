@@ -3,24 +3,53 @@
 import { Sun, Moon, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
+interface StrengthShadowItem {
+  title: string;
+  writeup: string;
+}
+
 interface StrengthsShadowsProps {
-  strengths?: string[];
-  shadows?: string[];
+  strengths?: StrengthShadowItem[];
+  shadows?: StrengthShadowItem[];
   isEmpty?: boolean;
 }
 
-const defaultStrengths = [
-  "Deep empathy — you feel what others feel, sometimes before they do.",
-  "Pattern recognition — you notice connections others miss.",
-  "Resilient optimism — you find light even in difficult moments.",
-  "Authentic expression — your words carry your true voice.",
+const defaultStrengths: StrengthShadowItem[] = [
+  {
+    title: "Deep empathy",
+    writeup: "you feel what others feel, sometimes before they do.",
+  },
+  {
+    title: "Pattern recognition",
+    writeup: "you notice connections others miss.",
+  },
+  {
+    title: "Resilient optimism",
+    writeup: "you find light even in difficult moments.",
+  },
+  {
+    title: "Authentic expression",
+    writeup: "your words carry your true voice.",
+  },
 ];
 
-const defaultShadows = [
-  "Overthinking — your active mind sometimes loops on worry.",
-  "Self-doubt — the inner critic speaks louder than it should.",
-  "Boundaries — saying no feels harder than it needs to be.",
-  "Perfectionism — good enough doesn&apos;t always feel like enough.",
+const defaultShadows: StrengthShadowItem[] = [
+  {
+    title: "Overthinking",
+    writeup: "your active mind sometimes loops on worry.",
+  },
+  {
+    title: "Self-doubt",
+    writeup: "the inner critic speaks louder than it should.",
+  },
+  {
+    title: "Boundaries",
+    writeup: "saying no feels harder than it needs to be.",
+  },
+  {
+    title: "Perfectionism",
+    writeup: "good enough doesn&apos;t always feel like enough.",
+  },
 ];
 
 export default function StrengthsShadows({
@@ -72,7 +101,10 @@ export default function StrengthsShadows({
                 <li key={index} className="flex gap-3">
                   <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary mt-2.5" />
                   <span className="text-foreground/85 text-sm leading-relaxed font-mono">
-                    {strength}
+                    <span className="font-bold text-primary">
+                      {strength.title}
+                    </span>{" "}
+                    — {strength.writeup}
                   </span>
                 </li>
               ))}
@@ -92,7 +124,10 @@ export default function StrengthsShadows({
                 <li key={index} className="flex gap-3">
                   <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-accent-foreground/50 mt-2.5" />
                   <span className="text-foreground/85 text-sm leading-relaxed font-mono">
-                    {shadow}
+                    <span className="font-bold text-primary">
+                      {shadow.title}
+                    </span>{" "}
+                    — {shadow.writeup}
                   </span>
                 </li>
               ))}

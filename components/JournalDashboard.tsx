@@ -87,10 +87,12 @@ interface StatCardProps {
 
 function StatCard({ icon, label, value }: StatCardProps) {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-lg bg-black p-3 text-center">
+    <div className="flex flex-col items-center gap-1 rounded-lg bg-black/20 border-border/50 p-3 text-center">
       <div className="text-fred-sage text-primary">{icon}</div>
-      <span className="text-lg font-semibold text-white">{value}</span>
-      <span className="text-xs text-primary">{label}</span>
+      <span className="text-lg font-semibold text-muted-foreground group-hover/dashboard:text-white transition">
+        {value}
+      </span>
+      <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -168,10 +170,10 @@ export default function JournalDashboard({ entries }: JournalDashboardProps) {
         </div>
       </div>
 
-      <Card className="border border-border/50 bg-card/80 p-4 md:p-6 shadow-sm transition-colors hover:border-primary/40 dashboard-card group/dashboard">
+      <Card className="border border-border/50 bg-card/80 p-4 md:p-6 transition-colors hover:border-primary/40 dashboard-card group/dashboard">
         <CardContent className="p-0">
           <Tabs defaultValue="wordcount" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-black/20 border border-sidebar-border rounded-md p-1">
+            <TabsList className="grid w-full grid-cols-2 bg-black/20 border border-border/50 rounded-md p-1">
               <TabsTrigger
                 value="wordcount"
                 className="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground transition-colors data-[state=inactive]:group-hover/dashboard:text-white hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
@@ -191,7 +193,7 @@ export default function JournalDashboard({ entries }: JournalDashboardProps) {
             </TabsList>
 
             <TabsContent value="wordcount" className="mt-6">
-              <div className="rounded-lg bg-black border border-border/60 px-4 py-3 md:px-5 md:py-4">
+              <div className="rounded-lg bg-black/20  px-4 py-3 md:px-5 md:py-4">
                 <ChartContainer
                   config={chartConfig}
                   className="h-[260px] w-full"
@@ -289,7 +291,7 @@ export default function JournalDashboard({ entries }: JournalDashboardProps) {
             </TabsContent>
 
             <TabsContent value="time" className="mt-6">
-              <div className="rounded-lg bg-black border border-border/60 px-4 py-3 md:px-5 md:py-4">
+              <div className="rounded-lg bg-black/20 border border-border/60 px-4 py-3 md:px-5 md:py-4">
                 <ChartContainer
                   config={chartConfig}
                   className="h-[260px] w-full"

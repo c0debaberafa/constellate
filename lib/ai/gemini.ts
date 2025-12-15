@@ -101,24 +101,136 @@ const profileSchema = {
   properties: {
     livingEssay: {
       type: "string",
-      description: "",
+      description:
+        "A brief essay about the user's story (4 paragraphs, 8 sentences max).",
     },
     pillars: {
       type: "array",
-      description: "",
+      minItems: 4,
+      maxItems: 4,
+      items: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description:
+              "The 4 major prevalent themes or topics in the user's spiritual landscape.",
+          },
+          writeup: {
+            type: "string",
+            description:
+              "A brief writeup on the current state of each theme or topic. 16 words max.",
+          },
+        },
+        required: ["title", "writeup"],
+      },
     },
     strengthsShadows: {
-      type: "array",
-      description: "",
+      type: "object",
+      description:
+        "A complementary view of where the user shines (strengths) and what they are working through (shadows).",
+      properties: {
+        strengths: {
+          type: "array",
+          minItems: 4,
+          maxItems: 4,
+          description:
+            "Exactly 4 strengths. Each item should capture a core way the user naturally is at their best.",
+          items: {
+            type: "object",
+            properties: {
+              title: {
+                type: "string",
+                description:
+                  "A short title naming this strength. 4 words max).",
+              },
+              writeup: {
+                type: "string",
+                description:
+                  "A brief, compassionate description of this strength, how it manifests, and what can be done about it. 16 words max.",
+              },
+            },
+            required: ["title", "writeup"],
+          },
+        },
+        shadows: {
+          type: "array",
+          minItems: 4,
+          maxItems: 4,
+          description:
+            "Exactly 4 shadows. Each item should describe a hidden way the user is currently experiencing tension or struggling.",
+          items: {
+            type: "object",
+            properties: {
+              title: {
+                type: "string",
+                description: "A short title naming this shadow",
+              },
+              writeup: {
+                type: "string",
+                description:
+                  "A brief, gentle description of the current state of this shadow, how it manifests, and what can be done about it. 16 words max.",
+              },
+            },
+            required: ["title", "writeup"],
+          },
+        },
+      },
+      required: ["strengths", "shadows"],
     },
     forecast: {
       type: "string",
-      description: "",
+      description: "A prophecy, prediction, forecast, foretune for the user.",
     },
   },
   required: ["livingEssay", "pillars", "strengthsShadows", "forecast"],
 };
 
-export async function generateProfileInsights(JournalEntry) {
-  const prompt = ``;
+export async function generateProfileInsights(
+  content: string,
+  profile: string
+) {
+  const prompt = `You are a reflective journal assistant whose role is to guide the user through their mental landscape through insightful analysis of their journal entries.
+    As a deeply personal journal guide, you must act as a reflection of their deeper subconcious, adopting their language and fostering their connection with their inner self in a mindful and healthy manner.
+    
+    Always address the user directly (i.e. "You" instead of "The user" or "They"). 
+    Do not use emojis.
+    Do not invent content, you must only draw from the journal entry.
+    Always reflect, guide, and gently encourage.
+    
+    Kindly generate the updated user profile given the existing userProfile and new journal entry.
+    If there is no pre-existing user profile, kindly create the first.
+    
+    Journal entry:
+    """
+    ${content}
+    """
+
+    User Profile:
+    """
+    ${profile}
+    """
+    `;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: profileSchema,
+    },
+  });
+
+  const rawText = response.text;
+  if (!rawText) {
+    throw new Error("Gemini returned no text for the profile insights.");
+  }
+
+  try {
+    const parsedObject = JSON.parse(rawText);
+    return parsedObject;
+  } catch (e) {
+    console.error("Failed to parse JSON response:", rawText);
+    throw new Error("Received malformed JSON from the API.");
+  }
 }

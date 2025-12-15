@@ -185,8 +185,8 @@ export default function JournalEntryCard({
     <>
       <Card
         className={cn(
-          "cursor-pointer gap-2 hover:border-primary/40 transition",
-          isExpanded && "border-primary/40"
+          "cursor-pointer gap-2 transition",
+          isExpanded ? "border-white/40" : "hover:border-primary/40"
         )}
         onClick={handleCardClick}
         onMouseEnter={() => setIsHovered(true)}
