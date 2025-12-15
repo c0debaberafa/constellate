@@ -167,4 +167,13 @@
       opacity: 0;
     }
   }
+
+  /* Dashboard chart hover: make axis text & lines white */
+  .dashboard-card:hover [data-chart] .recharts-cartesian-axis-tick text {
+    fill: white;
+  }
+
+  .dashboard-card:hover [data-chart] .recharts-cartesian-axis-line line {
+    stroke: white;
+  }
 }

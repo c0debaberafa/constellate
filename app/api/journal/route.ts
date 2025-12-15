@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateJournalInsights } from "@/lib/ai/gemini";
+import { auth } from "@clerk/nextjs/server";
 
 // helper function to sleep for a given number of milliseconds
 function sleep(ms: number): Promise<void> {
@@ -78,6 +79,11 @@ async function processMissingInsights(
 }
 
 export async function POST(req: Request) {
+  const { userId } = await auth(); // get user ID
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const { content, createdAt } = body;
@@ -88,6 +94,7 @@ export async function POST(req: Request) {
 
     const entry = await prisma.journalEntry.create({
       data: {
+        userId: userId,
         content,
         createdAt: createdAt ? new Date(createdAt) : new Date(),
         updatedAt: new Date(),
@@ -106,8 +113,14 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const entries = await prisma.journalEntry.findMany({
+      where: { userId: userId },
       orderBy: { createdAt: "desc" },
     });
 
@@ -138,6 +151,11 @@ export async function GET() {
 }
 
 export async function DELETE(req: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     // Extract the entry ID from the request
     // We can get it from query params: /api/journal?id=xxx
@@ -165,7 +183,7 @@ export async function DELETE(req: Request) {
 
     // Delete the entry using Prisma
     await prisma.journalEntry.delete({
-      where: { id: entryId },
+      where: { id: entryId, userId },
     });
 
     return NextResponse.json(

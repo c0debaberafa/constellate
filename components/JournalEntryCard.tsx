@@ -86,6 +86,13 @@ export default function JournalEntryCard({
     }
   };
 
+  // Calculate word count for the entry
+  const wordCount = useMemo(() => {
+    const getWordCount = (text: string): number =>
+      text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+    return getWordCount(entry.content);
+  }, [entry.content]);
+
   // Process content to highlight quotes with hover cards
   const highlightedContent = useMemo(() => {
     if (!entry.highlights || entry.highlights.length === 0) {
@@ -235,7 +242,7 @@ export default function JournalEntryCard({
             {/* Summary Section */}
             {entry.summary ? (
               <div className="space-y-2 animate-in fade-in duration-300">
-                <p className="text-primary text-sm leading-relaxed">
+                <p className="text-primary text-sm italic leading-relaxed">
                   {entry.summary.sentence}
                 </p>
                 {entry.summary.bullets && entry.summary.bullets.length > 0 && (
@@ -263,7 +270,7 @@ export default function JournalEntryCard({
                       : "text-muted-foreground"
                   )}
                 >
-                  Full Entry
+                  Full Entry {`(${wordCount} words)`}
                 </p>
                 <div
                   className={cn(
@@ -285,7 +292,7 @@ export default function JournalEntryCard({
                               </span>
                             </HoverCardTrigger>
                             <HoverCardContent className="w-80">
-                              <p className="text-primary text-sm leading-relaxed">
+                              <p className="italic text-primary text-sm leading-relaxed">
                                 {part.annotation}
                               </p>
                             </HoverCardContent>

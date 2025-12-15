@@ -95,3 +95,30 @@ export async function generateJournalInsights(content: string) {
     throw new Error("Received malformed JSON from the API.");
   }
 }
+
+const profileSchema = {
+  type: "object",
+  properties: {
+    livingEssay: {
+      type: "string",
+      description: "",
+    },
+    pillars: {
+      type: "array",
+      description: "",
+    },
+    strengthsShadows: {
+      type: "array",
+      description: "",
+    },
+    forecast: {
+      type: "string",
+      description: "",
+    },
+  },
+  required: ["livingEssay", "pillars", "strengthsShadows", "forecast"],
+};
+
+export async function generateProfileInsights(JournalEntry) {
+  const prompt = ``;
+}

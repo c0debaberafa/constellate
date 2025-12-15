@@ -12,8 +12,19 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id             String @id 
+  email          String @unique
+  firstName      String?
+  lastName       String?
+  journalEntries JournalEntry[]
+  userProfile    UserProfile?
+}
+
 model JournalEntry {
   id          String   @id @default(cuid())
+  userId      String
+  user        User? @relation(fields: [userId], references:[id])
   content     String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -22,4 +33,16 @@ model JournalEntry {
   summary     Json?
   highlights  Json?
   embedding   Float[]
+  updatedProfile Boolean @default(false)
+}
+
+model UserProfile {
+  id          String @id @default(uuid())
+  userId      String @unique 
+  user        User @relation(fields:[userId], references:[id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  version     Int @default(0)
+
+  aiProfile   Json?  
 }

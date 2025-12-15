@@ -1,32 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import JournalList from "@/components/JournalList";
-import JournalStats from "@/components/JournalStats";
 import { JournalEntry } from "@/components/JournalEntryCard";
-import { Target, BookOpen } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { Card } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, CartesianGrid } from "recharts";
-
-interface JournalStatsData {
-  avgWordCount: number;
-  currentStreak: number;
-  longestStreak: number;
-  totalEntries: number;
-}
+import JournalDashboard from "@/components/JournalDashboard";
 
 export default function JournalPage() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<JournalStatsData | null>(null);
 
   // Helper function to map API response to JournalEntry format
   const mapEntry = (entry: any): JournalEntry => ({
@@ -129,58 +114,7 @@ export default function JournalPage() {
     };
   }, [entries]); // Re-run when entries change (to check if polling is still needed)
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch("/api/journal/stats");
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch journal stats");
-        }
-
-        const data = await response.json();
-        setStats(data);
-      } catch (err) {
-        console.error("Error fetching stats:", err);
-        // Don't show error to user, just log it
-      }
-    };
-
-    fetchStats();
-  }, []);
-
-  // Prepare chart data: word count by day of month
-  const chartData = useMemo(() => {
-    // Get current month
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-    // Initialize data for all days of the month
-    const data = Array.from({ length: daysInMonth }, (_, i) => ({
-      day: i + 1,
-      wordCount: 0,
-    }));
-
-    // Group entries by day and calculate word counts
-    entries.forEach((entry) => {
-      const entryDate = new Date(entry.createdAt);
-      if (
-        entryDate.getMonth() === currentMonth &&
-        entryDate.getFullYear() === currentYear
-      ) {
-        const day = entryDate.getDate();
-        const wordCount = entry.content
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean).length;
-        data[day - 1].wordCount += wordCount;
-      }
-    });
-
-    return data;
-  }, [entries]);
+  // stats and chart data are now handled inside the JournalDashboard component
 
   const handleDelete = async (id: string) => {
     try {
@@ -213,49 +147,8 @@ export default function JournalPage() {
 
   return (
     <div className="justify-start w-[95%] md:w-[80%] mt-12 px-4 py-16">
-      <div className="max-w-6xl mx-auto space-y-4">
-        <header className="space-y-4 text-start">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Target className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-2xl font-semibold text-primary font-mono">
-              Dashboard
-            </h2>
-          </div>
-          <div className="flex flex-col justify-center items-start gap-4 mt-6">
-            <Card className="w-full bg-black border-0 px-6">
-              <ChartContainer
-                config={{
-                  wordCount: {
-                    label: "Word Count",
-                    color: "hsl(var(--primary))",
-                  },
-                }}
-                className="h-[240px] w-full"
-              >
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={(value) => `${value}`} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar
-                    dataKey="wordCount"
-                    fill="var(--color-wordCount)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ChartContainer>
-            </Card>
-            {stats && (
-              <JournalStats
-                avgWordCount={stats.avgWordCount}
-                currentStreak={stats.currentStreak}
-                longestStreak={stats.longestStreak}
-                totalEntries={stats.totalEntries}
-              />
-            )}
-          </div>
-        </header>
+      <div className="max-w-6xl mx-auto space-y-8">
+        <JournalDashboard entries={entries} />
 
         <section>
           <div className="flex items-center gap-3 mb-4">
