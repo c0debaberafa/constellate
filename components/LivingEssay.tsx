@@ -1,12 +1,11 @@
 "use client";
 
-import { Sprout, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
 interface LivingEssayProps {
-  content?: string;
+  content?: string | string[];
   isEmpty?: boolean;
 }
 
@@ -14,9 +13,6 @@ export default function LivingEssay({
   content,
   isEmpty = false,
 }: LivingEssayProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-
   const sampleContent = `Your journal entries over the past few months reveal a person in beautiful transition. There's a recurring thread of seeking authenticity — not the performative kind, but the quiet, honest kind that emerges when no one is watching.
 
 You write often about small moments: the way morning light falls through your window, conversations that felt meaningful, the gap between who you are and who you're becoming. This attention to nuance suggests a deepening relationship with your inner life.
@@ -32,7 +28,7 @@ What strikes me most is your growing capacity for self-compassion. Earlier entri
           <div className="p-2 rounded-xl bg-primary/10">
             <Sprout className="w-5 h-5 text-primary" />
           </div>
-          <h2 className="text-2xl font-semibold text-foreground font-mono">
+          <h2 className="text-2xl font-semibold text-primary font-mono">
             Living Essay
           </h2>
         </div>
@@ -55,14 +51,12 @@ What strikes me most is your growing capacity for self-compassion. Earlier entri
     );
   }
 
-  const displayContent = content || sampleContent;
-  const paragraphs = displayContent.split("\n\n");
-  const previewParagraphs = paragraphs.slice(0, 2);
-  const hasMore = paragraphs.length > 2;
+  const isArrayContent = Array.isArray(content);
+  const displayContent = isArrayContent ? content : content || sampleContent;
 
-  const handleCardClick = () => {
-    setIsExpanded(!isExpanded);
-  };
+  const paragraphs: string[] = isArrayContent
+    ? (displayContent as string[])
+    : (displayContent as string).split("\n\n");
 
   return (
     <section className="mb-12">
@@ -75,56 +69,23 @@ What strikes me most is your growing capacity for self-compassion. Earlier entri
         </h2>
       </div>
 
-      <p className="text-muted-foreground mb-6 font-mono">
-        Your story, woven from every word you've written.
+      <p className="text-muted-foreground mb-6 text-sm font-mono">
+        Your story, woven from every word you&apos;ve written.
       </p>
 
-      <Card
-        className={cn(
-          "cursor-pointer p-8 transition",
-          isExpanded ? "border-white/40" : "hover:border-primary/40"
-        )}
-        onClick={handleCardClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
+      <Card className="p-8 border-primary/20 text-primary">
         <div className="prose prose-lg max-w-none">
-          {(isExpanded ? paragraphs : previewParagraphs).map(
-            (paragraph, index) => (
-              <p
-                key={index}
-                className={cn(
-                  "leading-relaxed mb-4 last:mb-0 font-mono whitespace-pre-line transition-colors duration-200",
-                  isHovered || isExpanded
-                    ? "text-foreground"
-                    : "text-muted-foreground"
-                )}
-              >
-                {paragraph}
-              </p>
-            )
-          )}
-        </div>
-
-        {hasMore && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            className="mt-6 flex items-center gap-2 text-primary hover:text-primary/80 transition-colors group font-mono"
-          >
-            <span className="text-sm font-medium">
-              {isExpanded ? "Show less" : "Continue reading"}
-            </span>
-            <ChevronDown
+          {paragraphs.map((paragraph: string, index: number) => (
+            <p
+              key={index}
               className={cn(
-                "w-4 h-4 transition-transform duration-300",
-                isExpanded && "rotate-180"
+                "leading-relaxed mb-4 last:mb-0 font-mono whitespace-pre-line"
               )}
-            />
-          </button>
-        )}
+            >
+              {paragraph}
+            </p>
+          ))}
+        </div>
       </Card>
     </section>
   );

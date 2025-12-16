@@ -18,6 +18,7 @@ export default function JournalPage() {
     id: entry.id,
     content: entry.content,
     createdAt: new Date(entry.createdAt),
+    startedAt: entry.startedAt ? new Date(entry.startedAt) : null,
     title: entry.title,
     summary: entry.summary,
     highlights: entry.highlights,

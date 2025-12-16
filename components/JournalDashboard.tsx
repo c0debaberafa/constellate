@@ -1,32 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  BarChart3,
-  Clock,
-  Flame,
-  Target,
-  FileText,
-  TrendingUp,
-} from "lucide-react";
+import { BarChart3, Clock, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  LineChart,
-  Line,
-  ReferenceLine,
-} from "recharts";
 import { JournalEntry } from "@/components/JournalEntryCard";
+import WordCountTab from "@/components/WordCountTab";
+import TimeTab from "@/components/TimeTab";
 
 interface JournalStatsData {
   avgWordCount: number;
@@ -39,63 +19,12 @@ interface JournalDashboardProps {
   entries: JournalEntry[];
 }
 
-// Placeholder time-tracking data until real journaling-time analytics exist
-const timeData = [
-  { day: "Mon", start: 7.5, end: 8.0 },
-  { day: "Tue", start: 6.0, end: 6.5 },
-  { day: "Wed", start: 8.0, end: 8.75 },
-  { day: "Thu", start: 7.0, end: 7.5 },
-  { day: "Fri", start: 9.0, end: 9.5 },
-  { day: "Sat", start: 10.0, end: 11.0 },
-  { day: "Sun", start: 8.5, end: 9.25 },
-];
-
-const timeStats = {
-  averageStartTime: 7.8,
-  averageEndTime: 8.4,
-  averageJournalingTime: 36, // minutes
+// Convert Date to decimal hours (e.g., 7:30 AM = 7.5)
+const dateToDecimalHours = (date: Date): number => {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  return hours + minutes / 60;
 };
-
-const formatTime = (decimal: number) => {
-  const hours = Math.floor(decimal);
-  const minutes = Math.round((decimal - hours) * 60);
-  const period = hours >= 12 ? "PM" : "AM";
-  const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
-  return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
-};
-
-const chartConfig = {
-  words: {
-    label: "Words",
-    color: "hsl(var(--fred-lavender))",
-  },
-  start: {
-    label: "Start Time",
-    color: "hsl(var(--fred-sage))",
-  },
-  end: {
-    label: "End Time",
-    color: "hsl(var(--fred-peach))",
-  },
-};
-
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-}
-
-function StatCard({ icon, label, value }: StatCardProps) {
-  return (
-    <div className="flex flex-col items-center gap-1 rounded-lg bg-black/20 border-border/50 p-3 text-center">
-      <div className="text-fred-sage text-primary">{icon}</div>
-      <span className="text-lg font-semibold text-muted-foreground group-hover/dashboard:text-white transition">
-        {value}
-      </span>
-      <span className="text-xs text-muted-foreground">{label}</span>
-    </div>
-  );
-}
 
 export default function JournalDashboard({ entries }: JournalDashboardProps) {
   const [stats, setStats] = useState<JournalStatsData | null>(null);
@@ -157,6 +86,109 @@ export default function JournalDashboard({ entries }: JournalDashboardProps) {
     return now.toLocaleDateString(undefined, { month: "short" });
   }, []);
 
+  // Compute time data for entries with createdAt (end times)
+  // Start times only shown if startedAt exists
+  const timeData = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // Filter entries that have createdAt (all entries should have this)
+    const entriesWithTime = entries.filter((entry) => entry.createdAt);
+
+    // Initialize data structure
+    const data = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      start: null as number | null,
+      end: null as number | null,
+    }));
+
+    entriesWithTime.forEach((entry) => {
+      // Handle both Date objects and date strings from API
+      const endDate = new Date(entry.createdAt); // End time is when entry was saved (createdAt)
+      const startDate = entry.startedAt ? new Date(entry.startedAt) : null;
+
+      // Use createdAt to determine which day/month to show
+      // Only process entries from the current month (based on createdAt date)
+      if (
+        endDate.getMonth() === currentMonth &&
+        endDate.getFullYear() === currentYear &&
+        !isNaN(endDate.getTime())
+      ) {
+        const dayIndex = endDate.getDate() - 1;
+        if (dayIndex >= 0 && dayIndex < data.length) {
+          // Set start time from startedAt (only if it exists)
+          if (startDate && !isNaN(startDate.getTime())) {
+            data[dayIndex].start = dateToDecimalHours(startDate);
+          }
+          // Always set end time from createdAt (when entry was saved)
+          data[dayIndex].end = dateToDecimalHours(endDate);
+        }
+      }
+    });
+
+    return data;
+  }, [entries]);
+
+  // Calculate time statistics
+  // End times calculated from all entries with createdAt
+  // Start times and duration only calculated from entries with startedAt
+  const timeStats = useMemo(() => {
+    // All entries with createdAt (for end time stats)
+    const entriesWithEndTime = entries.filter((entry) => entry.createdAt);
+
+    // Only entries with startedAt (for start time and duration stats)
+    const entriesWithStartTime = entries.filter(
+      (entry) => entry.startedAt && entry.createdAt
+    );
+
+    if (entriesWithEndTime.length === 0) {
+      return {
+        averageStartTime: 0,
+        averageEndTime: 0,
+        averageJournalingTime: 0,
+      };
+    }
+
+    // Calculate end time average from all entries
+    let totalEndTime = 0;
+    let endTimeCount = 0;
+
+    entriesWithEndTime.forEach((entry) => {
+      const endDate = new Date(entry.createdAt);
+      if (!isNaN(endDate.getTime())) {
+        totalEndTime += dateToDecimalHours(endDate);
+        endTimeCount++;
+      }
+    });
+
+    // Calculate start time average and duration only from entries with startedAt
+    let totalStartTime = 0;
+    let totalDuration = 0;
+    let startTimeCount = 0;
+
+    entriesWithStartTime.forEach((entry) => {
+      const startDate = new Date(entry.startedAt!);
+      const endDate = new Date(entry.createdAt);
+
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+        totalStartTime += dateToDecimalHours(startDate);
+        totalDuration +=
+          (endDate.getTime() - startDate.getTime()) / (1000 * 60); // duration in minutes
+        startTimeCount++;
+      }
+    });
+
+    return {
+      averageStartTime:
+        startTimeCount > 0 ? totalStartTime / startTimeCount : 0,
+      averageEndTime: endTimeCount > 0 ? totalEndTime / endTimeCount : 0,
+      averageJournalingTime:
+        startTimeCount > 0 ? Math.round(totalDuration / startTimeCount) : 0,
+    };
+  }, [entries]);
+
   return (
     <section className="mb-12 text-start">
       <div className="mb-4 flex items-center gap-3">
@@ -193,215 +225,19 @@ export default function JournalDashboard({ entries }: JournalDashboardProps) {
             </TabsList>
 
             <TabsContent value="wordcount" className="mt-6">
-              <div className="rounded-lg bg-black/20  px-4 py-3 md:px-5 md:py-4">
-                <ChartContainer
-                  config={chartConfig}
-                  className="h-[260px] w-full"
-                >
-                  <BarChart
-                    data={wordCountData}
-                    margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                  >
-                    <XAxis
-                      dataKey="day"
-                      tick={{
-                        fill: "hsl(var(--muted-foreground))",
-                        fontSize: 12,
-                      }}
-                      axisLine={{
-                        stroke: "hsl(var(--muted-foreground))",
-                        strokeWidth: 1,
-                      }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{
-                        fill: "hsl(var(--muted-foreground))",
-                        fontSize: 12,
-                      }}
-                      axisLine={{
-                        stroke: "hsl(var(--muted-foreground))",
-                        strokeWidth: 1,
-                      }}
-                      tickLine={false}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value, name) =>
-                            name === "words" ? `${value} words` : String(value)
-                          }
-                          labelFormatter={(label) => (
-                            <div className="flex flex-col gap-1">
-                              <span className="text-primary">
-                                {currentMonthLabel} {label}
-                              </span>
-                              {stats && (
-                                <span className="text-muted-foreground">
-                                  Average: {stats.avgWordCount.toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        />
-                      }
-                      cursor={{
-                        fill: "hsl(var(--muted))",
-                        opacity: 0.35,
-                      }}
-                    />
-                    <Bar
-                      dataKey="words"
-                      fill="hsl(var(--primary))"
-                      radius={[8, 8, 0, 0]}
-                      maxBarSize={48}
-                    />
-                    {stats && (
-                      <ReferenceLine
-                        y={stats.avgWordCount}
-                        stroke="hsl(var(--primary))"
-                      />
-                    )}
-                  </BarChart>
-                </ChartContainer>
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <StatCard
-                  icon={<Flame className="h-4 w-4" />}
-                  label="Longest Streak"
-                  value={stats ? `${stats.longestStreak} days` : "--"}
-                />
-                <StatCard
-                  icon={<Target className="h-4 w-4" />}
-                  label="Current Streak"
-                  value={stats ? `${stats.currentStreak} days` : "--"}
-                />
-                <StatCard
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  label="Avg. Words"
-                  value={stats ? stats.avgWordCount : "--"}
-                />
-                <StatCard
-                  icon={<FileText className="h-4 w-4" />}
-                  label="Total Entries"
-                  value={stats ? stats.totalEntries : "--"}
-                />
-              </div>
+              <WordCountTab
+                wordCountData={wordCountData}
+                stats={stats}
+                currentMonthLabel={currentMonthLabel}
+              />
             </TabsContent>
 
             <TabsContent value="time" className="mt-6">
-              <div className="rounded-lg bg-black/20 border border-border/60 px-4 py-3 md:px-5 md:py-4">
-                <ChartContainer
-                  config={chartConfig}
-                  className="h-[260px] w-full"
-                >
-                  <LineChart
-                    data={timeData}
-                    margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                  >
-                    <CartesianGrid
-                      stroke="hsl(var(--muted-foreground))"
-                      className="opacity-60"
-                    />
-                    <XAxis
-                      dataKey="day"
-                      tick={{
-                        fill: "hsl(var(--muted-foreground))",
-                        fontSize: 12,
-                      }}
-                      axisLine={{
-                        stroke: "hsl(var(--muted-foreground))",
-                        strokeWidth: 1,
-                      }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      domain={[5, 12]}
-                      tick={{
-                        fill: "hsl(var(--muted-foreground))",
-                        fontSize: 12,
-                      }}
-                      axisLine={{
-                        stroke: "hsl(var(--muted-foreground))",
-                        strokeWidth: 1,
-                      }}
-                      tickLine={false}
-                      tickFormatter={formatTime}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value, name) => (
-                            <span>
-                              {name === "start" ? "Started" : "Finished"}:{" "}
-                              {formatTime(value as number)}
-                            </span>
-                          )}
-                        />
-                      }
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="start"
-                      stroke="hsl(var(--fred-sage))"
-                      strokeWidth={2}
-                      dot={{
-                        fill: "hsl(var(--fred-sage))",
-                        strokeWidth: 0,
-                        r: 4,
-                      }}
-                      activeDot={{
-                        r: 6,
-                        fill: "hsl(var(--fred-sage))",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="end"
-                      stroke="hsl(var(--fred-peach))"
-                      strokeWidth={2}
-                      dot={{
-                        fill: "hsl(var(--fred-peach))",
-                        strokeWidth: 0,
-                        r: 4,
-                      }}
-                      activeDot={{
-                        r: 6,
-                        fill: "hsl(var(--fred-peach))",
-                      }}
-                    />
-                  </LineChart>
-                </ChartContainer>
-              </div>
-              <div className="mt-4 flex justify-center gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-fred-sage" />
-                  <span>Start Time</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-fred-peach" />
-                  <span>End Time</span>
-                </div>
-              </div>
-
-              <div className="mt-6 grid grid-cols-3 gap-3">
-                <StatCard
-                  icon={<Clock className="h-4 w-4" />}
-                  label="Avg. Start"
-                  value={formatTime(timeStats.averageStartTime)}
-                />
-                <StatCard
-                  icon={<Clock className="h-4 w-4" />}
-                  label="Avg. End"
-                  value={formatTime(timeStats.averageEndTime)}
-                />
-                <StatCard
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  label="Avg. Duration"
-                  value={`${timeStats.averageJournalingTime}m`}
-                />
-              </div>
+              <TimeTab
+                timeData={timeData}
+                timeStats={timeStats}
+                currentMonthLabel={currentMonthLabel}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>

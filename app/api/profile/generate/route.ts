@@ -3,6 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { generateProfileInsights } from "@/lib/ai/gemini"; // Your existing AI function
 
 export async function POST(request: Request) {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       // Securely fetch the entry content and status
       prisma.journalEntry.findUnique({
         where: { id: entryId, userId: userId },
-        select: { content: true, updatedProfile: true },
+        select: { content: true, updatedProfile: true, createdAt: true },
       }),
       // Fetch the profile for current state and version
       prisma.userProfile.findUnique({
@@ -51,10 +52,52 @@ export async function POST(request: Request) {
     const currentVersion = userProfile.version || 0;
     const nextVersion = currentVersion + 1;
 
-    // Convert existing insights (JSONB) to a string for the AI prompt
-    const existingInsightsString = userProfile.aiProfile
-      ? JSON.stringify(userProfile.aiProfile)
+    // Extract only the latest profile version to send to AI (not the entire history)
+    // This keeps the prompt size constant regardless of how many versions exist
+    let latestProfileVersion: Record<string, unknown> | null = null;
+    if (
+      userProfile.aiProfile &&
+      typeof userProfile.aiProfile === "object" &&
+      !Array.isArray(userProfile.aiProfile)
+    ) {
+      const aiProfile = userProfile.aiProfile as Record<string, unknown>;
+      if (currentVersion > 0) {
+        // Extract only the latest version (v{currentVersion})
+        latestProfileVersion =
+          (aiProfile[`v${currentVersion}`] as Record<string, unknown>) || null;
+      }
+    }
+
+    // Convert the latest version to a string for the AI prompt
+    const existingInsightsString = latestProfileVersion
+      ? JSON.stringify(latestProfileVersion)
       : "{}";
+
+    // TEMPORARY: Log sizes for debugging
+    console.log("=== Profile Generation Size Debug ===");
+    console.log(
+      "Journal entry content length:",
+      entryToProcess.content.length,
+      "chars"
+    );
+    console.log(
+      "Journal entry word count:",
+      entryToProcess.content.split(/\s+/).length,
+      "words"
+    );
+    console.log(
+      "Profile string length (latest version only):",
+      existingInsightsString.length,
+      "chars"
+    );
+    console.log("Profile string (first 200 chars):", existingInsightsString);
+    console.log("Current version:", currentVersion);
+    console.log("Next version:", nextVersion);
+    console.log(
+      "Sending latest version only:",
+      currentVersion > 0 ? `v${currentVersion}` : "none (first generation)"
+    );
+    console.log("=====================================");
 
     // 3. Call the AI function
     // Note: This is the most time-consuming step outside the transaction
@@ -71,7 +114,7 @@ export async function POST(request: Request) {
       typeof userProfile.aiProfile === "object" &&
       !Array.isArray(userProfile.aiProfile)
         ? (userProfile.aiProfile as Record<string, unknown>)
-        : {};
+        : ({} as Record<string, unknown>);
 
     await prisma.$transaction([
       // A. Update the UserProfile
@@ -82,8 +125,14 @@ export async function POST(request: Request) {
           // Store the new insights object under its version key
           aiProfile: {
             ...existingAiProfile, // Spread existing versioned insights
-            [`v${nextVersion}`]: newInsightsFromAI, // Add the new version
-          },
+            // Each version includes the AI output plus metadata about which
+            // journal entry produced it and when that entry was created.
+            [`v${nextVersion}`]: {
+              ...(newInsightsFromAI as Record<string, unknown>),
+              updatingEntryId: entryId,
+              updatingEntryCreatedAt: entryToProcess.createdAt,
+            },
+          } as Prisma.InputJsonValue,
         },
       }),
 

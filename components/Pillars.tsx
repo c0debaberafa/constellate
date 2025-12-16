@@ -1,13 +1,51 @@
 "use client";
 
-import { Heart, Flower, Landmark, Flame, Anchor, Sparkles } from "lucide-react";
+import { useState } from "react";
+import {
+  Heart,
+  Flower,
+  Flame,
+  Sparkles,
+  Atom,
+  Waves,
+  Wind,
+  Eclipse,
+  Rainbow,
+  Moon,
+  Brain,
+  Sprout,
+  Anchor,
+  Snowflake,
+  Rose,
+  TreePalm,
+  TreePine,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
-interface Pillar {
-  icon: React.ReactNode;
+export type IconName =
+  | "Flame"
+  | "Atom"
+  | "Waves"
+  | "Wind"
+  | "Eclipse"
+  | "Rainbow"
+  | "Moon"
+  | "Heart"
+  | "Brain"
+  | "Flower"
+  | "Sprout"
+  | "Anchor"
+  | "Snowflake"
+  | "Rose"
+  | "TreePalm"
+  | "TreePine";
+
+export interface Pillar {
+  iconName?: IconName;
   title: string;
   description: string;
+  motivation?: string;
   color: "primary" | "accent" | "muted" | "secondary";
 }
 
@@ -16,59 +54,103 @@ interface PillarsProps {
   isEmpty?: boolean;
 }
 
+const iconComponents: Record<
+  IconName,
+  React.ComponentType<{ className?: string }>
+> = {
+  Flame,
+  Atom,
+  Waves,
+  Wind,
+  Eclipse,
+  Rainbow,
+  Moon,
+  Heart,
+  Brain,
+  Flower,
+  Sprout,
+  Anchor,
+  Snowflake,
+  Rose,
+  TreePalm,
+  TreePine,
+};
+
+interface PillarCardProps {
+  pillar: Pillar;
+}
+
+function PillarCard({ pillar }: PillarCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const IconComponent =
+    (pillar.iconName && iconComponents[pillar.iconName]) || Heart;
+
+  return (
+    <Card
+      className={cn(
+        "p-6 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 border border-border",
+        isHovered ? "border-primary/40" : ""
+      )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="inline-flex p-3 rounded-xl mb-4 bg-muted/60">
+        <span
+          className={cn(isHovered ? "text-primary" : "text-muted-foreground")}
+        >
+          <IconComponent className="w-6 h-6" />
+        </span>
+      </div>
+      <h3
+        className={cn("text-xl font-semibold text-foreground mb-2 font-mono")}
+      >
+        {pillar.title}
+      </h3>
+      <p
+        className={cn(
+          "text-sm leading-relaxed font-mono transition-colors duration-200",
+          isHovered ? "text-primary" : "text-muted-foreground"
+        )}
+      >
+        {isHovered && pillar.motivation
+          ? pillar.motivation
+          : pillar.description}
+      </p>
+    </Card>
+  );
+}
+
 const defaultPillars: Pillar[] = [
   {
-    icon: <Heart className="w-6 h-6" />,
+    iconName: "Heart",
     title: "Connection",
     description:
       "You draw energy from meaningful relationships. Depth over breadth, always.",
     color: "accent",
   },
   {
-    icon: <Landmark className="w-6 h-6" />,
+    iconName: "Flower",
     title: "Growth",
     description:
       "A quiet but persistent pull toward becoming. You&apos;re never quite done learning.",
     color: "primary",
   },
   {
-    icon: <Flame className="w-6 h-6" />,
+    iconName: "Flame",
     title: "Expression",
     description:
       "The need to create and share what&apos;s inside you. Words, ideas, art — it matters.",
     color: "secondary",
   },
   {
-    icon: <Anchor className="w-6 h-6" />,
+    iconName: "TreePine",
     title: "Presence",
     description:
       "Grounding yourself in the now. Finding peace in small, ordinary moments.",
     color: "muted",
   },
 ];
-
-const colorClasses = {
-  primary: {
-    bg: "bg-primary/10",
-    icon: "text-primary",
-    border: "border-primary/20",
-  },
-  accent: {
-    bg: "bg-accent/40",
-    icon: "text-accent-foreground",
-    border: "border-accent/30",
-  },
-  secondary: {
-    bg: "bg-secondary/50",
-    icon: "text-secondary-foreground",
-    border: "border-secondary/30",
-  },
-  muted: {
-    bg: "bg-muted/60",
-    icon: "text-muted-foreground",
-    border: "border-muted/40",
-  },
-};
 
 export default function Pillars({
   pillars = defaultPillars,
@@ -81,7 +163,7 @@ export default function Pillars({
           <div className="p-2 rounded-xl bg-primary/10">
             <Flower className="w-5 h-5 text-primary" />
           </div>
-          <h2 className="text-2xl font-semibold text-foreground font-mono">
+          <h2 className="text-2xl font-semibold text-primary font-mono">
             Your Pillars
           </h2>
         </div>
@@ -115,32 +197,13 @@ export default function Pillars({
         </h2>
       </div>
 
-      <p className="text-muted-foreground mb-6 font-mono">
-        The foundations you return to, even when you don't notice.
+      <p className="text-muted-foreground mb-6 text-sm font-mono">
+        The foundations you return to, even when you don&apos;t notice.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {pillars.map((pillar, index) => {
-          const colors = colorClasses[pillar.color];
-          return (
-            <Card
-              key={index}
-              className={cn(
-                "p-6 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5",
-                colors.border
-              )}
-            >
-              <div className={cn("inline-flex p-3 rounded-xl mb-4", colors.bg)}>
-                <span className={colors.icon}>{pillar.icon}</span>
-              </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2 font-mono">
-                {pillar.title}
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed font-mono">
-                {pillar.description}
-              </p>
-            </Card>
-          );
+          return <PillarCard key={index} pillar={pillar} />;
         })}
       </div>
     </section>

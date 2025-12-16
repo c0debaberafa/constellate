@@ -5,19 +5,26 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import MonkeyEditor from "@/components/MonkeyEditor";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, Pencil } from "lucide-react";
 import { useTyping } from "@/contexts/TypingContext";
 
 const NewEntry = () => {
   const [content, setContent] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [goalWordCount, setGoalWordCount] = useState(750);
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
   const { isTyping, setIsTyping, isMouseMoving } = useTyping();
 
   const handleChange = (newContent: string) => {
     setContent(newContent);
 
-    if (newContent.trim() && !startTime) {
+    // Reset startTime when content becomes empty
+    if (!newContent.trim() && startTime) {
+      setStartTime(null);
+    }
+    // Set startTime when starting from an empty entry
+    else if (newContent.trim() && !startTime) {
       setStartTime(new Date());
     }
   };
@@ -29,7 +36,7 @@ const NewEntry = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content,
-          createdAt: startTime,
+          startedAt: startTime,
         }),
       });
 
@@ -67,7 +74,24 @@ const NewEntry = () => {
 
   const wordCount = getWordCount(content);
   const shouldHideUI = isTyping && !isMouseMoving;
-  const progress = Math.min((wordCount / 750) * 100, 100);
+  const progress = Math.min((wordCount / goalWordCount) * 100, 100);
+
+  const handleGoalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      setGoalWordCount(value);
+    }
+  };
+
+  const handleGoalBlur = () => {
+    setIsEditingGoal(false);
+  };
+
+  const handleGoalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      setIsEditingGoal(false);
+    }
+  };
 
   // Auto-scroll to keep cursor centered
   useEffect(() => {
@@ -109,7 +133,7 @@ const NewEntry = () => {
         <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg text-primary">
           <svg
             viewBox="-12 -12 269.2 269.2"
-            aria-label="Fred logo"
+            aria-label="Constellate logo"
             className={`h-6 w-6 ${isTyping ? "typing-blink" : ""}`}
             fill="none"
             stroke="currentColor"
@@ -125,9 +149,34 @@ const NewEntry = () => {
 
       <header className="sticky top-0 h-36 mb-4 bg-background z-10">
         <div className="absolute bottom-0 w-full py-2">
-          <p className="mb-2 text-muted-foreground font-mono">
-            {wordCount} / 750
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-muted-foreground font-mono">
+              {wordCount} /{" "}
+              {isEditingGoal ? (
+                <input
+                  type="number"
+                  value={goalWordCount}
+                  onChange={handleGoalChange}
+                  onBlur={handleGoalBlur}
+                  onKeyDown={handleGoalKeyDown}
+                  className="w-16 px-1 bg-background border-b border-muted-foreground text-muted-foreground font-mono focus:outline-none focus:border-primary"
+                  autoFocus
+                  min="1"
+                />
+              ) : (
+                goalWordCount
+              )}
+            </p>
+            <button
+              onClick={() => setIsEditingGoal(true)}
+              className={`transition-opacity duration-300 ${
+                shouldHideUI ? "opacity-0 pointer-events-none" : "opacity-100"
+              }`}
+              aria-label="Edit word count goal"
+            >
+              <Pencil className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+            </button>
+          </div>
           {/* Progress bar */}
           <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
             <div

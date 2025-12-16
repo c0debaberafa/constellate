@@ -1,6 +1,91 @@
 import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({});
+
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
+
+/**
+ * Checks if an error is a retryable server error (5xx) or timeout
+ */
+function isRetryableError(error: unknown): boolean {
+  if (!error) return false;
+
+  const errorMessage = String(error);
+  const errorObj = error as {
+    status?: number;
+    code?: string;
+    message?: string;
+  };
+
+  // Check for HTTP status codes >= 500
+  if (errorObj.status && errorObj.status >= 500) {
+    return true;
+  }
+
+  // Check error message for server error indicators
+  const message = errorMessage.toLowerCase();
+  const serverErrorPatterns = [
+    "503",
+    "504",
+    "500",
+    "502",
+    "501",
+    "timeout",
+    "overloaded",
+    "service unavailable",
+    "internal server error",
+    "bad gateway",
+    "gateway timeout",
+  ];
+
+  return serverErrorPatterns.some((pattern) => message.includes(pattern));
+}
+
+/**
+ * Wraps an async function with exponential backoff retry logic for retryable errors
+ * @param fn The async function to wrap
+ * @param operationName Name of the operation for logging purposes
+ * @returns The result of the wrapped function
+ */
+async function withExponentialBackoff<T>(
+  fn: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      // Check if this is a retryable server error
+      const isRetryable = isRetryableError(error);
+      const isLastAttempt = attempt === MAX_RETRIES - 1;
+
+      // If it's not retryable (client error) or it's the last attempt, throw immediately
+      if (!isRetryable || isLastAttempt) {
+        throw error;
+      }
+
+      // Calculate exponential backoff: INITIAL_BACKOFF_MS * 2^attempt
+      const waitTime = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+      console.warn(
+        `${operationName} attempt ${
+          attempt + 1
+        } failed with retryable error. Retrying in ${waitTime}ms...`,
+        error
+      );
+
+      // Wait before retrying
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+    }
+  }
+
+  // This should never be reached, but TypeScript requires it
+  throw lastError || new Error(`${operationName} failed after all retries.`);
+}
 // Define the schema using the required JSON Schema format
 const journalSchema = {
   // The overall response is a JSON object
@@ -73,27 +158,29 @@ export async function generateJournalInsights(content: string) {
     """
     `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: journalSchema,
-    },
-  });
+  return await withExponentialBackoff(async () => {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: journalSchema,
+      },
+    });
 
-  const rawText = response.text;
-  if (!rawText) {
-    throw new Error("Gemini returned no text for the journal insights.");
-  }
+    const rawText = response.text;
+    if (!rawText) {
+      throw new Error("Gemini returned no text for the journal insights.");
+    }
 
-  try {
-    const parsedObject = JSON.parse(rawText);
-    return parsedObject;
-  } catch (e) {
-    console.error("Failed to parse JSON response:", rawText);
-    throw new Error("Received malformed JSON from the API.");
-  }
+    try {
+      const parsedObject = JSON.parse(rawText);
+      return parsedObject;
+    } catch {
+      console.error("Failed to parse JSON response:", rawText);
+      throw new Error("Received malformed JSON from the API.");
+    }
+  }, "Journal insights generation");
 }
 
 const profileSchema = {
@@ -102,7 +189,7 @@ const profileSchema = {
     livingEssay: {
       type: "string",
       description:
-        "A brief essay about the user's story (4 paragraphs, 8 sentences max).",
+        "A single, concise but vivid paragraph about the user. This should be written with narrative flow, summarizing the user's origins, present, and future, as well as challenges and successes.",
     },
     pillars: {
       type: "array",
@@ -119,10 +206,38 @@ const profileSchema = {
           writeup: {
             type: "string",
             description:
-              "A brief writeup on the current state of each theme or topic. 16 words max.",
+              "A brief writeup on the current state of each theme or topic. 8 words max.",
+          },
+          motivation: {
+            type: "string",
+            description:
+              "A brief call to action, reminder, or suggestion to protect and foster this pillar. 8 words max. ",
+          },
+          icon: {
+            type: "string",
+            description:
+              "The name of a Lucide icon that best represents this pillar. Must be one of the following enum.",
+            enum: [
+              "Flame",
+              "Atom",
+              "Waves",
+              "Wind",
+              "Eclipse",
+              "Rainbow",
+              "Moon",
+              "Heart",
+              "Brain",
+              "Flower",
+              "Sprout",
+              "Anchor",
+              "Snowflake",
+              "Rose",
+              "TreePalm",
+              "TreePine",
+            ],
           },
         },
-        required: ["title", "writeup"],
+        required: ["title", "writeup", "motivation", "icon"],
       },
     },
     strengthsShadows: {
@@ -132,10 +247,10 @@ const profileSchema = {
       properties: {
         strengths: {
           type: "array",
-          minItems: 4,
-          maxItems: 4,
+          minItems: 3,
+          maxItems: 3,
           description:
-            "Exactly 4 strengths. Each item should capture a core way the user naturally is at their best.",
+            "Exactly 3 strengths. Each item should capture a core way the user naturally is at their best.",
           items: {
             type: "object",
             properties: {
@@ -147,7 +262,7 @@ const profileSchema = {
               writeup: {
                 type: "string",
                 description:
-                  "A brief, compassionate description of this strength, how it manifests, and what can be done about it. 16 words max.",
+                  "A brief, compassionate description of this strength and how it manifests. 16 words max.",
               },
             },
             required: ["title", "writeup"],
@@ -155,10 +270,10 @@ const profileSchema = {
         },
         shadows: {
           type: "array",
-          minItems: 4,
-          maxItems: 4,
+          minItems: 3,
+          maxItems: 3,
           description:
-            "Exactly 4 shadows. Each item should describe a hidden way the user is currently experiencing tension or struggling.",
+            "Exactly 3 shadows. Each item should describe a hidden way the user is currently experiencing tension or struggling.",
           items: {
             type: "object",
             properties: {
@@ -169,7 +284,7 @@ const profileSchema = {
               writeup: {
                 type: "string",
                 description:
-                  "A brief, gentle description of the current state of this shadow, how it manifests, and what can be done about it. 16 words max.",
+                  "A brief, gentle description of the shadow and how it manifests. 16 words max.",
               },
             },
             required: ["title", "writeup"],
@@ -192,12 +307,12 @@ export async function generateProfileInsights(
 ) {
   const prompt = `You are a reflective journal assistant whose role is to guide the user through their mental landscape through insightful analysis of their journal entries.
     As a deeply personal journal guide, you must act as a reflection of their deeper subconcious, adopting their language and fostering their connection with their inner self in a mindful and healthy manner.
-    
+
     Always address the user directly (i.e. "You" instead of "The user" or "They"). 
     Do not use emojis.
     Do not invent content, you must only draw from the journal entry.
     Always reflect, guide, and gently encourage.
-    
+
     Kindly generate the updated user profile given the existing userProfile and new journal entry.
     If there is no pre-existing user profile, kindly create the first.
     
@@ -212,25 +327,38 @@ export async function generateProfileInsights(
     """
     `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: profileSchema,
-    },
-  });
+  // TEMPORARY: Log final prompt size
+  console.log("=== Gemini Prompt Size Debug ===");
+  console.log("Total prompt length:", prompt.length, "chars");
+  console.log("Total prompt word count:", prompt.split(/\s+/).length, "words");
+  console.log(
+    "Estimated tokens (rough):",
+    Math.ceil(prompt.length / 4),
+    "tokens"
+  );
+  console.log("=================================");
 
-  const rawText = response.text;
-  if (!rawText) {
-    throw new Error("Gemini returned no text for the profile insights.");
-  }
+  return await withExponentialBackoff(async () => {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: profileSchema,
+      },
+    });
 
-  try {
-    const parsedObject = JSON.parse(rawText);
-    return parsedObject;
-  } catch (e) {
-    console.error("Failed to parse JSON response:", rawText);
-    throw new Error("Received malformed JSON from the API.");
-  }
+    const rawText = response.text;
+    if (!rawText) {
+      throw new Error("Gemini returned no text for the profile insights.");
+    }
+
+    try {
+      const parsedObject = JSON.parse(rawText);
+      return parsedObject;
+    } catch {
+      console.error("Failed to parse JSON response:", rawText);
+      throw new Error("Received malformed JSON from the API.");
+    }
+  }, "Profile generation");
 }

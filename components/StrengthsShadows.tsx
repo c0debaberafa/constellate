@@ -68,7 +68,7 @@ export default function StrengthsShadows({
         </h2>
       </div>
 
-      <p className="text-muted-foreground mb-6 font-mono">
+      <p className="text-muted-foreground text-sm mb-6 font-mono">
         The light you stand in, and the darkness behind you.
       </p>
 

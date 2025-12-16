@@ -21,16 +21,20 @@ export async function GET() {
         createdAt: "asc", // 'asc' means oldest first
       },
       select: {
-        id: true, // We only need the ID to pass to the processing route
+        id: true,
+        createdAt: true,
       },
     });
 
     const hasEntryToProcess = !!oldestEntryToProcess;
 
-    // Return the entryId if it exists, and a boolean flag
+    // Return the entryId, createdAt, and a boolean flag
     return NextResponse.json({
       hasEntryToProcess: hasEntryToProcess,
       entryId: oldestEntryToProcess ? oldestEntryToProcess.id : null,
+      entryCreatedAt: oldestEntryToProcess
+        ? oldestEntryToProcess.createdAt
+        : null,
     });
   } catch (error) {
     console.error("Profile check failed:", error);

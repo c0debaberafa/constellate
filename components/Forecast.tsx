@@ -41,9 +41,8 @@ export default function Forecast({ forecast, isEmpty = false }: ForecastProps) {
         </h2>
       </div>
 
-      <p className="text-muted-foreground mb-6 font-mono">
-        A gentle reflection drawn from your recent entries. Not a prediction — a
-        mirror.
+      <p className="text-muted-foreground mb-6 text-sm font-mono">
+        A fortune drawn from your recent entries. Not a prediction — a mirror.
       </p>
 
       {isEmpty || !currentForecast ? (
@@ -62,7 +61,7 @@ export default function Forecast({ forecast, isEmpty = false }: ForecastProps) {
           </div>
         </Card>
       ) : (
-        <div className="relative rounded-2xl p-8 md:p-10 overflow-hidden bg-gradient-to-br from-primary/5 via-accent/5 to-secondary/5 border border-border/50">
+        <div className="relative rounded-2xl p-8 md:p-10 overflow-hidden bg-gradient-to-br from-primary/5 via-accent/5 to-secondary/5 border border-primary/20">
           {/* Decorative elements */}
           <div className="absolute top-4 right-4 text-primary/20">
             <Stars className="w-8 h-8" />
@@ -74,7 +73,7 @@ export default function Forecast({ forecast, isEmpty = false }: ForecastProps) {
           <div className="relative">
             <p
               className={cn(
-                "text-xl md:text-2xl text-primary leading-relaxed text-center italic max-w-2xl mx-auto transition-opacity duration-300 font-mono",
+                "text-md md:text-lg text-primary leading-relaxed text-center italic max-w-2xl mx-auto transition-opacity duration-300 font-mono",
                 isRefreshing && "opacity-0"
               )}
             >

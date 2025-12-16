@@ -28,6 +28,7 @@ model JournalEntry {
   content     String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  startedAt   DateTime? // When the user started typing (before saving)
   
   title       String?
   summary     Json?

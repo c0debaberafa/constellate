@@ -31,7 +31,8 @@ import {
 export interface JournalEntry {
   id: string;
   content: string;
-  createdAt: Date;
+  createdAt: Date | string;
+  startedAt?: Date | string | null;
   title?: string | null;
   summary?: {
     sentence: string;
@@ -227,33 +228,46 @@ export default function JournalEntryCard({
         </CardHeader>
 
         <CardContent>
-          <div className="space-y-2 overflow-hidden border-t py-2">
+          <div className="space-y-4 overflow-hidden">
             {/* Title or Loading State */}
             {entry.title ? (
-              <h3 className="text-primary text-lg lowercase font-semibold italic mb-2">
+              <h3 className="text-primary text-base md:text-lg lowercase font-semibold italic font-mono">
                 {entry.title}
               </h3>
             ) : (
-              <p className="text-primary text-md font-semibold mb-2">
+              <p className="text-primary text-sm md:text-base font-semibold font-mono">
                 Generating summary...
               </p>
             )}
 
-            {/* Summary Section */}
-            {entry.summary ? (
-              <div className="space-y-2 animate-in fade-in duration-300">
-                <p className="text-primary text-sm italic leading-relaxed">
-                  {entry.summary.sentence}
-                </p>
-                {entry.summary.bullets && entry.summary.bullets.length > 0 && (
-                  <ul className="list-disc list-inside space-y-1 text-primary text-sm">
-                    {entry.summary.bullets.map((bullet, idx) => (
-                      <li key={idx}>{bullet}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ) : null}
+            {(entry.title || entry.summary) && (
+              <Card className="relative overflow-hidden border-border/60 bg-background p-4 md:p-6">
+                <div className="absolute inset-x-4 -top-4 h-16 bg-primary/10 blur-3xl" />
+                <div className="relative space-y-4">
+                  {/* Summary Section */}
+                  {entry.summary && (
+                    <div className="space-y-3 animate-in fade-in duration-300">
+                      <p className="text-primary text-sm italic leading-relaxed font-mono">
+                        {entry.summary.sentence}
+                      </p>
+                      {entry.summary.bullets &&
+                        entry.summary.bullets.length > 0 && (
+                          <ul className="space-y-2 text-muted-foreground text-sm font-mono">
+                            {entry.summary.bullets.map((bullet, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                                <span className="leading-relaxed">
+                                  {bullet}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
 
             {/* Entry Content with Highlighted Quotes */}
             <div

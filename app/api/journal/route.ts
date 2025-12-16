@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { content, createdAt } = body;
+    const { content, startedAt } = body;
 
     if (!content || typeof content !== "string") {
       return NextResponse.json({ error: "Invalid content" }, { status: 400 });
@@ -96,8 +96,8 @@ export async function POST(req: Request) {
       data: {
         userId: userId,
         content,
-        createdAt: createdAt ? new Date(createdAt) : new Date(),
-        updatedAt: new Date(),
+        startedAt: startedAt ? new Date(startedAt) : null,
+        // createdAt and updatedAt are automatically handled by Prisma
       },
     });
 
