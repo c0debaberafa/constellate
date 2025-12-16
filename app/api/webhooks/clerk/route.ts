@@ -71,9 +71,9 @@ export async function POST(req: Request) {
   const { id: clerkUserId, email_addresses, first_name, last_name } = evt.data;
 
   // Find the primary email
-  const primaryEmail =
+  const primaryEmail: string | null =
     email_addresses.find((e) => e.id === evt.data.primary_email_address_id)
-      ?.email_address || "";
+      ?.email_address || null;
 
   // 4. Handle the 'user.created' event (The Sign-Up Action)
   if (eventType === "user.created") {
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
         prisma.user.create({
           data: {
             id: clerkUserId, // 💡 CRITICAL: This links your DB to Clerk
-            email: primaryEmail,
+            email: primaryEmail || undefined,
             firstName: first_name,
             lastName: last_name,
           },

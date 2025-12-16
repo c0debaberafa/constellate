@@ -44,9 +44,9 @@ async function main() {
     });
     console.log(`✅ User ${userId} exists or was created`);
 
-    // Find all entries without a userId
+    // Find all entries without a user relation (orphaned entries)
     const entriesWithoutUserId = await prisma.journalEntry.findMany({
-      where: { userId: null },
+      where: { user: null },
     });
 
     if (entriesWithoutUserId.length === 0) {
@@ -61,7 +61,7 @@ async function main() {
 
     // Update all entries to use this userId
     const result = await prisma.journalEntry.updateMany({
-      where: { userId: null },
+      where: { user: null },
       data: { userId: userId },
     });
 
