@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BarChart3, Clock, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { JournalEntry } from "@/components/JournalEntryCard";
+import { JournalEntry } from "@/components/journal/JournalEntryCard";
 import WordCountTab from "@/components/WordCountTab";
 import TimeTab from "@/components/TimeTab";
 
@@ -140,7 +140,7 @@ export default function JournalDashboard({ entries }: JournalDashboardProps) {
 
     // Only entries with startedAt (for start time and duration stats)
     const entriesWithStartTime = entries.filter(
-      (entry) => entry.startedAt && entry.createdAt
+      (entry) => entry.startedAt && entry.createdAt,
     );
 
     if (entriesWithEndTime.length === 0) {

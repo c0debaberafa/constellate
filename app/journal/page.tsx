@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import JournalList from "@/components/JournalList";
-import { JournalEntry } from "@/components/JournalEntryCard";
+import { JournalEntry } from "@/components/journal/JournalEntryCard";
 import { BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import JournalDashboard from "@/components/JournalDashboard";
+import JournalDashboard from "@/components/journal/JournalDashboard";
 
 export default function JournalPage() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -44,7 +44,7 @@ export default function JournalPage() {
       } catch (err) {
         console.error("Error fetching entries:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to load journal entries"
+          err instanceof Error ? err.message : "Failed to load journal entries",
         );
       } finally {
         setIsLoading(false);
@@ -59,7 +59,7 @@ export default function JournalPage() {
   useEffect(() => {
     // Check if there are any entries missing insights
     const hasMissingInsights = entries.some(
-      (entry) => !entry.summary || !entry.title || !entry.highlights
+      (entry) => !entry.summary || !entry.title || !entry.highlights,
     );
 
     // If all entries have insights, don't poll
@@ -130,7 +130,7 @@ export default function JournalPage() {
 
       // Optimistically remove the entry from the list
       setEntries((prevEntries) =>
-        prevEntries.filter((entry) => entry.id !== id)
+        prevEntries.filter((entry) => entry.id !== id),
       );
 
       toast.success("Entry deleted successfully");
@@ -140,7 +140,7 @@ export default function JournalPage() {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to delete entry. Please try again."
+          : "Failed to delete entry. Please try again.",
       );
       throw error; // Re-throw so the card component can handle it
     }
