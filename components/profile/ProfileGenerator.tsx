@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function ProfileGenerator() {
   const { userId, isLoaded } = useAuth();
@@ -78,6 +79,7 @@ export default function ProfileGenerator() {
 
     setIsProcessing(true);
     setStatusMessage("Generating insights...");
+    toast.loading("Generating user insights...", { id: "generate-user-insights" });
 
     try {
       const response = await fetch("/api/profile/generate", {
@@ -99,6 +101,10 @@ export default function ProfileGenerator() {
       setStatusMessage(
         `Success! Profile updated to version ${data.newVersion}.`
       );
+      toast.success("User insights generated successfully.", {
+        id: "generate-user-insights",
+        description: `Profile updated to version ${data.newVersion}.`,
+      });
 
       // Reset state
       setHasNewEntry(false);
@@ -115,6 +121,13 @@ export default function ProfileGenerator() {
       router.refresh();
     } catch (error) {
       console.error("Error generating insights:", error);
+      toast.error("Failed to generate user insights.", {
+        id: "generate-user-insights",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please try again in a moment.",
+      });
       setStatusMessage(
         error instanceof Error
           ? error.message

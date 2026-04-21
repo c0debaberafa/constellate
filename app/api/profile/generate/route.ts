@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-import { generateProfileInsights } from "@/lib/ai/gemini"; // Your existing AI function
+import { runOrchestration } from "@/lib/ai/orchestrator";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -101,10 +101,13 @@ export async function POST(request: Request) {
 
     // 3. Call the AI function
     // Note: This is the most time-consuming step outside the transaction
-    const newInsightsFromAI = await generateProfileInsights(
-      entryToProcess.content,
-      existingInsightsString
-    );
+    const newInsightsFromAI = await runOrchestration({
+      type: "profile_update",
+      content: entryToProcess.content,
+      profile: existingInsightsString,
+      userId,
+      currentEntryCreatedAt: entryToProcess.createdAt,
+    });
 
     // 4. Update the Profile and Journal Entry atomically using a transaction
     // We do this inside the transaction to prevent race conditions or partial updates.

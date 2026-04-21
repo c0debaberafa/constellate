@@ -5,8 +5,8 @@ import { BarChart3, Clock, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JournalEntry } from "@/components/journal/JournalEntryCard";
-import WordCountTab from "@/components/WordCountTab";
-import TimeTab from "@/components/TimeTab";
+import WordCountTab from "@/components/journal/WordCountTab";
+import TimeTab from "@/components/journal/TimeTab";
 
 interface JournalStatsData {
   avgWordCount: number;

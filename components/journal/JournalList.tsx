@@ -1,6 +1,6 @@
 "use client";
 
-import JournalEntryCard, { JournalEntry } from "./journal/JournalEntryCard";
+import JournalEntryCard, { JournalEntry } from "./JournalEntryCard";
 import { BookOpen } from "lucide-react";
 
 interface JournalListProps {

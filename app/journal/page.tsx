@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import JournalList from "@/components/JournalList";
+import JournalList from "@/components/journal/JournalList";
 import { JournalEntry } from "@/components/journal/JournalEntryCard";
 import { BookOpen } from "lucide-react";
 import { toast } from "sonner";

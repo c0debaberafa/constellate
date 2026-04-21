@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateJournalInsights } from "@/lib/ai/gemini";
+import { runOrchestration } from "@/lib/ai/orchestrator";
 import { auth } from "@clerk/nextjs/server";
 
 // helper function to sleep for a given number of milliseconds
@@ -27,7 +27,11 @@ async function processMissingInsights(
       // generate journal insights and update database
       try {
         // pauses the loop until the Promise resolves
-        const aiInsights = await generateJournalInsights(entry.content);
+        const aiInsights = await runOrchestration({
+          type: "journal_insight",
+          content: entry.content,
+          userId: entry.userId,
+        });
 
         // only runs if the AI call succeeded
         await prisma.journalEntry.update({
@@ -78,6 +82,14 @@ async function processMissingInsights(
   console.log("Insight processing complete.");
 }
 
+function hasMissingInsights(entry: {
+  summary: string | null;
+  title: string | null;
+  highlights: string | null;
+}) {
+  return !entry.summary || !entry.title || !entry.highlights;
+}
+
 export async function POST(req: Request) {
   const { userId } = await auth(); // get user ID
   if (!userId) {
@@ -99,6 +111,11 @@ export async function POST(req: Request) {
         startedAt: startedAt ? new Date(startedAt) : null,
         // createdAt and updatedAt are automatically handled by Prisma
       },
+    });
+
+    // Fire-and-forget insight generation after save so POST stays fast.
+    processMissingInsights([entry]).catch((error) => {
+      console.error("Background insight generation error after save:", error);
     });
 
     return NextResponse.json({ entry }, { status: 200 });
@@ -124,22 +141,16 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    const missingAI = entries.filter(
-      (e) => !e.summary || !e.title || !e.highlights
-    );
-
-    // Trigger background processing without awaiting it
-    // This allows the response to return immediately while insights generate in the background
-    if (missingAI.length > 0) {
-      // Fire and forget - don't await this
-      processMissingInsights(missingAI).catch((error) => {
-        // Log errors but don't block the response
-        console.error("Background insight generation error:", error);
-      });
-    }
+    const missingAI = entries.filter(hasMissingInsights);
 
     // Return entries immediately, even if some are still generating insights
-    return NextResponse.json({ entries }, { status: 200 });
+    return NextResponse.json(
+      {
+        entries,
+        missingInsightsCount: missingAI.length,
+      },
+      { status: 200 }
+    );
   } catch (err) {
     console.error("GET /api/journal error", err);
     const errorMessage = err instanceof Error ? err.message : "Unknown error";

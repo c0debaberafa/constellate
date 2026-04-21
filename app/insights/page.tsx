@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
-import LivingEssay from "@/components/LivingEssay";
-import Pillars, { type Pillar, type IconName } from "@/components/Pillars";
-import StrengthsShadows from "@/components/StrengthsShadows";
-import Forecast from "@/components/Forecast";
-import ProfileGenerator from "@/components/ProfileGenerator";
+import LivingEssay from "@/components/profile/LivingEssay";
+import Pillars, { type Pillar, type IconName } from "@/components/profile/Pillars";
+import StrengthsShadows from "@/components/profile/StrengthsShadows";
+import Forecast from "@/components/profile/Forecast";
+import ProfileGenerator from "@/components/profile/ProfileGenerator";
 import {
   Select,
   SelectContent,

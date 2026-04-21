@@ -86,6 +86,15 @@ async function withExponentialBackoff<T>(
   // This should never be reached, but TypeScript requires it
   throw lastError || new Error(`${operationName} failed after all retries.`);
 }
+
+function safeParseJson<T>(rawText: string, operationName: string): T {
+  try {
+    return JSON.parse(rawText) as T;
+  } catch {
+    console.error(`Failed to parse JSON response for ${operationName}:`, rawText);
+    throw new Error(`Received malformed JSON from the API for ${operationName}.`);
+  }
+}
 // Define the schema using the required JSON Schema format
 const journalSchema = {
   // The overall response is a JSON object
@@ -173,13 +182,7 @@ export async function generateJournalInsights(content: string) {
       throw new Error("Gemini returned no text for the journal insights.");
     }
 
-    try {
-      const parsedObject = JSON.parse(rawText);
-      return parsedObject;
-    } catch {
-      console.error("Failed to parse JSON response:", rawText);
-      throw new Error("Received malformed JSON from the API.");
-    }
+    return safeParseJson(rawText, "journal_insights_generation");
   }, "Journal insights generation");
 }
 
@@ -303,8 +306,14 @@ const profileSchema = {
 
 export async function generateProfileInsights(
   content: string,
-  profile: string
+  profile: string,
+  recentSummaries: string[]
 ) {
+  const recentSummariesText =
+    recentSummaries.length > 0
+      ? recentSummaries.map((summary, idx) => `${idx + 1}. ${summary}`).join("\n")
+      : "None";
+
   const prompt = `You are a reflective journal assistant whose role is to guide the user through their mental landscape through insightful analysis of their journal entries.
     As a deeply personal journal guide, you must act as a reflection of their deeper subconcious, adopting their language and fostering their connection with their inner self in a mindful and healthy manner.
 
@@ -324,6 +333,11 @@ export async function generateProfileInsights(
     User Profile:
     """
     ${profile}
+    """
+
+    Recent Journal Summaries Before This Entry:
+    """
+    ${recentSummariesText}
     """
     `;
 
@@ -353,12 +367,6 @@ export async function generateProfileInsights(
       throw new Error("Gemini returned no text for the profile insights.");
     }
 
-    try {
-      const parsedObject = JSON.parse(rawText);
-      return parsedObject;
-    } catch {
-      console.error("Failed to parse JSON response:", rawText);
-      throw new Error("Received malformed JSON from the API.");
-    }
+    return safeParseJson(rawText, "profile_generation");
   }, "Profile generation");
 }

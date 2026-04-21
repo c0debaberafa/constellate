@@ -8,6 +8,20 @@ import { toast } from "sonner";
 import { Save, Pencil } from "lucide-react";
 import { useTyping } from "@/contexts/TypingContext";
 
+const SAVE_ENTRY_TOAST_ID = "save-entry";
+
+type JournalEntry = {
+  id: string;
+  title: string | null;
+  summary: unknown | null;
+  highlights: unknown | null;
+};
+
+const hasInsights = (entry: JournalEntry) =>
+  Boolean(entry.title && entry.summary && entry.highlights);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const NewEntry = () => {
   const [content, setContent] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
@@ -48,23 +62,61 @@ const NewEntry = () => {
 
       const data = await res.json();
       console.log("Saved:", data);
-      return data;
+      return data as { entry: JournalEntry };
     } catch (error) {
       console.error("Error saving entry:", error);
       throw error;
     }
   }
 
+  const monitorJournalInsights = async (entryId: string) => {
+    const maxAttempts = 30;
+    const pollIntervalMs = 3000;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await sleep(pollIntervalMs);
+
+      try {
+        const response = await fetch("/api/journal");
+        if (!response.ok) {
+          continue;
+        }
+
+        const data = (await response.json()) as { entries?: JournalEntry[] };
+        const updatedEntry = data.entries?.find((entry) => entry.id === entryId);
+
+        if (updatedEntry && hasInsights(updatedEntry)) {
+          toast.success("Journal insights generated.", { id: `insights-${entryId}` });
+          return;
+        }
+      } catch (error) {
+        console.error("Insights polling error:", error);
+      }
+    }
+
+    toast.error("Journal insights are taking longer than expected.", {
+      id: `insights-${entryId}`,
+      description: "Your entry is saved. Insights will appear once ready.",
+    });
+  };
+
   const handleSubmit = async () => {
     if (!content.trim()) return;
 
+    toast.loading("Saving your entry...", { id: SAVE_ENTRY_TOAST_ID });
+
     try {
-      await saveEntry();
-      toast.success("Entry saved successfully");
+      const { entry } = await saveEntry();
+      toast.success("Journal entry saved.", { id: SAVE_ENTRY_TOAST_ID });
+      toast.loading("Generating journal insights...", { id: `insights-${entry.id}` });
       setContent("");
       setStartTime(null);
+      void monitorJournalInsights(entry.id);
     } catch (error) {
-      toast.error("Failed to save entry. Please try again.");
+      toast.error("Failed to save journal entry.", {
+        id: SAVE_ENTRY_TOAST_ID,
+        description: "Please try again.",
+      });
       console.error("Save error:", error);
     }
   };
