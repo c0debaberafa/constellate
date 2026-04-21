@@ -72,7 +72,7 @@ export default function JournalDashboard({ entries }: JournalDashboardProps) {
     };
 
     fetchStats();
-  }, []);
+  }, [entries.length]);
 
   const heatmapValues = useMemo(() => {
     const dailyWordTotals = new Map<string, number>();

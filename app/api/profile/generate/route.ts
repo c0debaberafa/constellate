@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { runOrchestration } from "@/lib/ai/orchestrator";
 
+// Generates exactly one next profile version from one journal entry.
+// This route is the write-side coordinator for the evolving profile pipeline.
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) {
@@ -20,14 +22,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // 1. Fetch the necessary data for processing
+    // Read entry and profile together so we can make one consistency decision
+    // (process now vs reject) from a single point-in-time view.
     const [entryToProcess, userProfile] = await prisma.$transaction([
-      // Securely fetch the entry content and status
       prisma.journalEntry.findUnique({
         where: { id: entryId, userId: userId },
         select: { content: true, updatedProfile: true, createdAt: true },
       }),
-      // Fetch the profile for current state and version
       prisma.userProfile.findUnique({
         where: { userId: userId },
         select: { version: true, aiProfile: true },
@@ -35,25 +36,25 @@ export async function POST(request: Request) {
     ]);
 
     if (!entryToProcess || entryToProcess.updatedProfile) {
-      // Check if the entry exists or has already been processed (avoid double-processing)
+      // Treat duplicate processing requests as conflict to preserve monotonic
+      // profile history and idempotent client behavior.
       return new NextResponse("Entry not found or already processed.", {
         status: 409,
       });
     }
 
     if (!userProfile) {
-      // UserProfile should exist, but handle the case if it doesn't
       return new NextResponse("User profile not found.", {
         status: 404,
       });
     }
 
-    // 2. Prepare data for AI generation
+    // Versioning is explicit so profile consumers can time-travel and compare.
     const currentVersion = userProfile.version || 0;
     const nextVersion = currentVersion + 1;
 
-    // Extract only the latest profile version to send to AI (not the entire history)
-    // This keeps the prompt size constant regardless of how many versions exist
+    // Feed the model only the latest snapshot, not the entire profile history,
+    // to keep prompt cost predictable as usage grows.
     let latestProfileVersion: Record<string, unknown> | null = null;
     if (
       userProfile.aiProfile &&
@@ -62,13 +63,12 @@ export async function POST(request: Request) {
     ) {
       const aiProfile = userProfile.aiProfile as Record<string, unknown>;
       if (currentVersion > 0) {
-        // Extract only the latest version (v{currentVersion})
         latestProfileVersion =
           (aiProfile[`v${currentVersion}`] as Record<string, unknown>) || null;
       }
     }
 
-    // Convert the latest version to a string for the AI prompt
+    // Empty-object seed keeps the first generation path uniform.
     const existingInsightsString = latestProfileVersion
       ? JSON.stringify(latestProfileVersion)
       : "{}";
@@ -99,8 +99,7 @@ export async function POST(request: Request) {
     );
     console.log("=====================================");
 
-    // 3. Call the AI function
-    // Note: This is the most time-consuming step outside the transaction
+    // AI call happens outside the write transaction to avoid long-held locks.
     const newInsightsFromAI = await runOrchestration({
       type: "profile_update",
       content: entryToProcess.content,
@@ -109,9 +108,8 @@ export async function POST(request: Request) {
       currentEntryCreatedAt: entryToProcess.createdAt,
     });
 
-    // 4. Update the Profile and Journal Entry atomically using a transaction
-    // We do this inside the transaction to prevent race conditions or partial updates.
-    // Ensure aiProfile is an object before spreading (handle null case)
+    // Persist both profile version bump and entry processing marker atomically:
+    // either both commit or neither, preventing split-brain state.
     const existingAiProfile =
       userProfile.aiProfile &&
       typeof userProfile.aiProfile === "object" &&
@@ -120,16 +118,12 @@ export async function POST(request: Request) {
         : ({} as Record<string, unknown>);
 
     await prisma.$transaction([
-      // A. Update the UserProfile
       prisma.userProfile.update({
         where: { userId: userId },
         data: {
-          version: nextVersion, // Increment the version counter
-          // Store the new insights object under its version key
+          version: nextVersion,
           aiProfile: {
-            ...existingAiProfile, // Spread existing versioned insights
-            // Each version includes the AI output plus metadata about which
-            // journal entry produced it and when that entry was created.
+            ...existingAiProfile,
             [`v${nextVersion}`]: {
               ...(newInsightsFromAI as Record<string, unknown>),
               updatingEntryId: entryId,
@@ -139,14 +133,12 @@ export async function POST(request: Request) {
         },
       }),
 
-      // B. Mark the JournalEntry as processed
       prisma.journalEntry.update({
         where: { id: entryId },
         data: { updatedProfile: true },
       }),
     ]);
 
-    // 5. Return success
     return NextResponse.json(
       {
         message: "Profile successfully updated.",

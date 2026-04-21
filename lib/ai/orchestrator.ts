@@ -1,9 +1,14 @@
 import {
   generateJournalInsights,
   generateProfileInsights,
+  type JournalInsights,
+  type ProfileInsights,
 } from "@/lib/ai/gemini";
 import { prisma } from "@/lib/prisma";
 
+// Central orchestration boundary between API routes and model-specific code.
+// Keeps request handlers thin and gives one place to add policy, telemetry,
+// and future model-routing without touching route logic.
 export type OrchestrationType = "journal_insight" | "profile_update";
 
 type RunOrchestrationInput = {
@@ -12,6 +17,15 @@ type RunOrchestrationInput = {
   userId: string;
   profile?: string;
   currentEntryCreatedAt?: Date;
+};
+
+type JournalInsightInput = RunOrchestrationInput & {
+  type: "journal_insight";
+};
+
+type ProfileUpdateInput = RunOrchestrationInput & {
+  type: "profile_update";
+  currentEntryCreatedAt: Date;
 };
 
 const SUMMARY_FALLBACK_MAX_CHARS = 180;
@@ -39,6 +53,8 @@ async function getRecentSummaries(
   userId: string,
   currentEntryCreatedAt: Date
 ): Promise<string[]> {
+  // Profile updates should react to near-term trajectory, not full history.
+  // Pulling only the latest summaries keeps prompts contextual and bounded.
   const recentEntries = await prisma.journalEntry.findMany({
     where: {
       userId,
@@ -56,15 +72,21 @@ async function getRecentSummaries(
   return recentEntries.map(getSummaryText);
 }
 
+export async function runOrchestration(
+  input: JournalInsightInput
+): Promise<JournalInsights>;
+export async function runOrchestration(
+  input: ProfileUpdateInput
+): Promise<ProfileInsights>;
 export async function runOrchestration({
   type,
   content,
   userId,
   profile,
   currentEntryCreatedAt,
-}: RunOrchestrationInput) {
-  // Keep userId in the contract even if unused right now.
-  // It gives us a stable place to add per-user policy/logging later.
+}: RunOrchestrationInput): Promise<JournalInsights | ProfileInsights> {
+  // Keep userId in the contract even when a branch does not consume it yet.
+  // This preserves a stable API for per-user controls/auditing later.
   void userId;
 
   if (type === "journal_insight") {
@@ -72,6 +94,8 @@ export async function runOrchestration({
   }
 
   if (type === "profile_update") {
+    // Profile generation needs an ordering anchor so we only use context that
+    // existed before this entry, preventing future entries from leaking in.
     if (!currentEntryCreatedAt) {
       throw new Error(
         "currentEntryCreatedAt is required for profile_update orchestration."

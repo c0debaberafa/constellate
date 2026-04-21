@@ -5,6 +5,8 @@ const ai = new GoogleGenAI({});
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
 
+// AI calls are the least reliable dependency in the request path; this helper
+// classifies transient provider failures so callers can retry safely.
 /**
  * Checks if an error is a retryable server error (5xx) or timeout
  */
@@ -95,6 +97,20 @@ function safeParseJson<T>(rawText: string, operationName: string): T {
     throw new Error(`Received malformed JSON from the API for ${operationName}.`);
   }
 }
+
+export type JournalInsights = {
+  title: string;
+  summary: {
+    sentence: string;
+    bullets: string[];
+  };
+  highlights: Array<{
+    quote: string;
+    annotation: string;
+  }>;
+};
+// Schemas intentionally act as a contract between model output and UI renderers.
+// They reduce downstream branching and make partial/malformed output explicit.
 // Define the schema using the required JSON Schema format
 const journalSchema = {
   // The overall response is a JSON object
@@ -150,7 +166,11 @@ const journalSchema = {
   required: ["title", "summary", "highlights"],
 };
 
-export async function generateJournalInsights(content: string) {
+export async function generateJournalInsights(
+  content: string
+): Promise<JournalInsights> {
+  // Journal insight generation is scoped to one entry and returns a shape that
+  // can be persisted directly onto JournalEntry for progressive enrichment.
   const prompt = `
     You are a reflective journal assistant whose role is to guide the user through their mental landscape through insightful analysis of their journal entries.
     As a deeply personal journal guide, you must act as a reflection of their deeper subconcious, adopting their language and fostering their connection with their inner self in a mindful and healthy manner.
@@ -182,7 +202,7 @@ export async function generateJournalInsights(content: string) {
       throw new Error("Gemini returned no text for the journal insights.");
     }
 
-    return safeParseJson(rawText, "journal_insights_generation");
+    return safeParseJson<JournalInsights>(rawText, "journal_insights_generation");
   }, "Journal insights generation");
 }
 
@@ -304,11 +324,34 @@ const profileSchema = {
   required: ["livingEssay", "pillars", "strengthsShadows", "forecast"],
 };
 
+export type ProfileInsights = {
+  livingEssay: string;
+  pillars: Array<{
+    title: string;
+    writeup: string;
+    motivation: string;
+    icon: string;
+  }>;
+  strengthsShadows: {
+    strengths: Array<{
+      title: string;
+      writeup: string;
+    }>;
+    shadows: Array<{
+      title: string;
+      writeup: string;
+    }>;
+  };
+  forecast: string;
+};
+
 export async function generateProfileInsights(
   content: string,
   profile: string,
   recentSummaries: string[]
-) {
+): Promise<ProfileInsights> {
+  // Profile updates are incremental: current entry + latest profile snapshot +
+  // a small rolling context window to balance continuity and token budget.
   const recentSummariesText =
     recentSummaries.length > 0
       ? recentSummaries.map((summary, idx) => `${idx + 1}. ${summary}`).join("\n")
@@ -367,6 +410,6 @@ export async function generateProfileInsights(
       throw new Error("Gemini returned no text for the profile insights.");
     }
 
-    return safeParseJson(rawText, "profile_generation");
+    return safeParseJson<ProfileInsights>(rawText, "profile_generation");
   }, "Profile generation");
 }

@@ -11,6 +11,8 @@ export async function GET() {
   }
 
   try {
+    // This endpoint is a read model for the profile UI: return version + payload
+    // without requiring clients to understand storage internals.
     const userProfile = await prisma.userProfile.findUnique({
       where: { userId: userId },
       select: {
@@ -21,6 +23,8 @@ export async function GET() {
     });
 
     if (!userProfile) {
+      // Returning an initialized shape avoids null-branching in the client and
+      // keeps first-run UX deterministic before any profile generation occurs.
       return NextResponse.json(
         {
           version: 0,

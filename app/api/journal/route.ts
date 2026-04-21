@@ -3,91 +3,107 @@ import { prisma } from "@/lib/prisma";
 import { runOrchestration } from "@/lib/ai/orchestrator";
 import { auth } from "@clerk/nextjs/server";
 
-// helper function to sleep for a given number of milliseconds
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+type AIStatus = "pending" | "processing" | "completed" | "failed";
 
-// async backoff functon to respect tier limits
+const MAX_AI_RETRIES = 3;
+const RETRYABLE_STATUSES: AIStatus[] = ["pending", "failed"];
+const PROCESSING_STALE_MS = 2 * 60 * 1000;
+
+// Durability improvement: job state is persisted in Postgres, so a process crash
+// does not lose "what still needs work". Any future GET can recover and resume.
+//
+// Limitation: this is still in-process execution, so it lacks queue guarantees
+// like leasing, delayed retries, dead-lettering, and worker autoscaling.
 async function processMissingInsights(
-  missingAI: Awaited<ReturnType<typeof prisma.journalEntry.findMany>>
+  candidates: Awaited<ReturnType<typeof prisma.journalEntry.findMany>>
 ) {
-  console.log(`Starting insight generation for ${missingAI.length} entries...`);
+  if (candidates.length === 0) {
+    return;
+  }
 
-  const maxRetries = 3; // prevent infinite loops
-  const initialDelayMs = 20000; // start with a 20-second delay (to respect the free tier limit)
+  console.log(`Starting insight generation for ${candidates.length} entries...`);
 
-  for (const entry of missingAI) {
-    let attempt = 0;
-    let success = false;
+  for (const entry of candidates) {
+    try {
+      const processingStaleBefore = new Date(Date.now() - PROCESSING_STALE_MS);
+      const claimed = await prisma.journalEntry.updateMany({
+        where: {
+          id: entry.id,
+          aiAttempts: { lt: MAX_AI_RETRIES },
+          OR: [
+            { aiStatus: { in: RETRYABLE_STATUSES } },
+            {
+              aiStatus: "processing",
+              updatedAt: { lt: processingStaleBefore },
+            },
+          ],
+        },
+        data: {
+          aiStatus: "processing",
+        },
+      });
 
-    // Retry block for each individual entry
-    while (attempt < maxRetries && !success) {
-      attempt++;
-      // generate journal insights and update database
-      try {
-        // pauses the loop until the Promise resolves
-        const aiInsights = await runOrchestration({
-          type: "journal_insight",
-          content: entry.content,
-          userId: entry.userId,
-        });
-
-        // only runs if the AI call succeeded
-        await prisma.journalEntry.update({
-          where: { id: entry.id },
-          data: {
-            title: aiInsights.title,
-            summary: aiInsights.summary,
-            highlights: aiInsights.highlights,
-          },
-        });
-
-        console.log(`✅ Success for entry ID: ${entry.id}`);
-        success = true; // exit the retry loop
-      } catch (error) {
-        // Check for the 429 rate limit error
-        if (error instanceof Error && error.message.includes("429")) {
-          const delay = initialDelayMs * Math.pow(2, attempt - 1); // exponential backoff
-          const waitTime = Math.min(delay, 60000); // max wait time of 60 seconds
-
-          console.warn(
-            `🛑 Rate limit hit for ID ${
-              entry.id
-            } (Attempt ${attempt}/${maxRetries}). Waiting ${
-              waitTime / 1000
-            }s...`
-          );
-
-          await sleep(waitTime); // AWAIT the pause
-
-          if (attempt === maxRetries) {
-            console.error(
-              `❌ Permanent failure for entry ID ${entry.id} after ${maxRetries} retries.`
-            );
-          }
-        } else {
-          // Handle other errors (Prisma, JSON parsing, etc.)
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          console.error(
-            `❌ Non-retryable error for ID ${entry.id}:`,
-            errorMessage
-          );
-          success = true; // Stop retrying this entry
-        }
+      if (claimed.count === 0) {
+        // Another request already processed/claimed this entry or it exhausted retries.
+        continue;
       }
+
+      const aiInsights = await runOrchestration({
+        type: "journal_insight",
+        content: entry.content,
+        userId: entry.userId,
+      });
+
+      await prisma.journalEntry.update({
+        where: { id: entry.id },
+        data: {
+          title: aiInsights.title,
+          summary: aiInsights.summary,
+          highlights: aiInsights.highlights,
+          aiStatus: "completed",
+        },
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`❌ Insight generation failed for ID ${entry.id}:`, errorMessage);
+
+      await prisma.journalEntry.update({
+        where: { id: entry.id },
+        data: {
+          aiStatus: "failed",
+          aiAttempts: { increment: 1 },
+        },
+      });
     }
   }
+
   console.log("Insight processing complete.");
 }
 
-function hasMissingInsights(entry: {
-  summary: string | null;
-  title: string | null;
-  highlights: string | null;
+function isRetryableAIJob(entry: { aiStatus: string; aiAttempts: number }) {
+  if (entry.aiAttempts >= MAX_AI_RETRIES) {
+    return false;
+  }
+
+  if (RETRYABLE_STATUSES.includes(entry.aiStatus as AIStatus)) {
+    return true;
+  }
+
+  // Crash recovery path: a long-stuck "processing" job is treated as retryable.
+  return false;
+}
+
+function isStaleProcessingJob(entry: {
+  aiStatus: string;
+  aiAttempts: number;
+  updatedAt: Date;
 }) {
-  return !entry.summary || !entry.title || !entry.highlights;
+  return (
+    entry.aiStatus === "processing" &&
+    entry.aiAttempts < MAX_AI_RETRIES &&
+    Date.now() - new Date(entry.updatedAt).getTime() > PROCESSING_STALE_MS
+  );
 }
 
 export async function POST(req: Request) {
@@ -109,11 +125,14 @@ export async function POST(req: Request) {
         userId: userId,
         content,
         startedAt: startedAt ? new Date(startedAt) : null,
+        aiStatus: "pending",
+        aiAttempts: 0,
         // createdAt and updatedAt are automatically handled by Prisma
       },
     });
 
-    // Fire-and-forget insight generation after save so POST stays fast.
+    // We return immediately after persistence and run AI out-of-band.
+    // This keeps write latency predictable and avoids coupling UX to model time.
     processMissingInsights([entry]).catch((error) => {
       console.error("Background insight generation error after save:", error);
     });
@@ -141,13 +160,21 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    const missingAI = entries.filter(hasMissingInsights);
+    const retryableEntries = entries.filter(
+      (entry) => isRetryableAIJob(entry) || isStaleProcessingJob(entry),
+    );
 
-    // Return entries immediately, even if some are still generating insights
+    // GET acts as a simple recovery trigger: if earlier background attempts were
+    // interrupted, reading the journal can safely kick off remaining work.
+    processMissingInsights(retryableEntries).catch((error) => {
+      console.error("Background insight generation error on GET:", error);
+    });
+
+    // UI uses this metadata to drive polling/progress without blocking reads.
     return NextResponse.json(
       {
         entries,
-        missingInsightsCount: missingAI.length,
+        missingInsightsCount: retryableEntries.length,
       },
       { status: 200 }
     );
@@ -168,20 +195,18 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    // Extract the entry ID from the request
-    // We can get it from query params: /api/journal?id=xxx
-    // or from the request body
+    // Accepting id in query or body keeps this endpoint compatible with both
+    // fetch styles used by browser clients.
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    // If not in query params, try the body
     let entryId = id;
     if (!entryId) {
       try {
         const body = await req.json();
         entryId = body.id;
       } catch {
-        // Body might be empty, that's okay
+        // Body might be empty; query-param callers are still valid.
       }
     }
 
@@ -192,7 +217,6 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // Delete the entry using Prisma
     await prisma.journalEntry.delete({
       where: { id: entryId, userId },
     });

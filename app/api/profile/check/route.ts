@@ -11,14 +11,15 @@ export async function GET() {
   }
 
   try {
-    // Find the OLDEST journal entry that has not yet updated the profile
+    // Profile generation is processed FIFO so the version history reflects the
+    // user's real chronology and remains explainable.
     const oldestEntryToProcess = await prisma.journalEntry.findFirst({
       where: {
         userId: userId,
-        updatedProfile: false, // Only look at entries that haven't been processed
+        updatedProfile: false,
       },
       orderBy: {
-        createdAt: "asc", // 'asc' means oldest first
+        createdAt: "asc",
       },
       select: {
         id: true,
@@ -28,7 +29,8 @@ export async function GET() {
 
     const hasEntryToProcess = !!oldestEntryToProcess;
 
-    // Return the entryId, createdAt, and a boolean flag
+    // Expose explicit processability state so clients can poll cheaply without
+    // fetching or diffing the full journal list.
     return NextResponse.json({
       hasEntryToProcess: hasEntryToProcess,
       entryId: oldestEntryToProcess ? oldestEntryToProcess.id : null,

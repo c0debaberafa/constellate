@@ -15,10 +15,13 @@ type JournalEntry = {
   title: string | null;
   summary: unknown | null;
   highlights: unknown | null;
+  aiStatus?: "pending" | "processing" | "completed" | "failed";
+  aiAttempts?: number;
 };
 
 const hasInsights = (entry: JournalEntry) =>
   Boolean(entry.title && entry.summary && entry.highlights);
+const MAX_AI_RETRIES = 3;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -87,6 +90,17 @@ const NewEntry = () => {
 
         if (updatedEntry && hasInsights(updatedEntry)) {
           toast.success("Journal insights generated.", { id: `insights-${entryId}` });
+          return;
+        }
+
+        if (
+          updatedEntry?.aiStatus === "failed" &&
+          (updatedEntry.aiAttempts ?? 0) >= MAX_AI_RETRIES
+        ) {
+          toast.error("Journal insights failed after retries.", {
+            id: `insights-${entryId}`,
+            description: "Your entry is saved. You can retry by reloading journal.",
+          });
           return;
         }
       } catch (error) {

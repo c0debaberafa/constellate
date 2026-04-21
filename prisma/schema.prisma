@@ -35,6 +35,8 @@ model JournalEntry {
   highlights  Json?
   embedding   Float[]
   updatedProfile Boolean @default(false)
+  aiStatus    String @default("pending")
+  aiAttempts  Int @default(0)
 }
 
 model UserProfile {

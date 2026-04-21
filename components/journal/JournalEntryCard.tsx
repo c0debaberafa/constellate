@@ -42,6 +42,8 @@ export interface JournalEntry {
     quote: string;
     annotation: string;
   }> | null;
+  aiStatus?: "pending" | "processing" | "completed" | "failed";
+  aiAttempts?: number;
 }
 
 interface JournalEntryCardProps {
@@ -234,6 +236,10 @@ export default function JournalEntryCard({
               <h3 className="text-primary text-base md:text-lg lowercase font-semibold italic font-mono">
                 {entry.title}
               </h3>
+            ) : entry.aiStatus === "failed" ? (
+              <p className="text-destructive text-sm md:text-base font-semibold font-mono">
+                Insight generation failed.
+              </p>
             ) : (
               <p className="text-primary text-sm md:text-base font-semibold font-mono">
                 Generating summary...
