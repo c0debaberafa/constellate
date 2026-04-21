@@ -176,4 +176,34 @@
   .dashboard-card:hover [data-chart] .recharts-cartesian-axis-line line {
     stroke: white;
   }
+
+  .journal-heatmap-empty {
+    fill: hsl(var(--muted));
+    opacity: 0.35;
+  }
+
+  .journal-heatmap-level-1 {
+    fill: hsl(var(--primary) / 0.35);
+  }
+
+  .journal-heatmap-level-2 {
+    fill: hsl(var(--primary) / 0.55);
+  }
+
+  .journal-heatmap-level-3 {
+    fill: hsl(var(--primary) / 0.75);
+  }
+
+  .journal-heatmap-level-4 {
+    fill: hsl(var(--primary));
+  }
+
+  .react-calendar-heatmap {
+    width: 100%;
+  }
+
+  .react-calendar-heatmap text {
+    fill: hsl(var(--muted-foreground));
+    font-size: 10px;
+  }
 }
